@@ -1,0 +1,21 @@
+{
+  "name": "react-native-chatsocket",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "react-native"
+  ],
+  "author": "279197148@qq.com",
+  "license": "MIT",
+  "peerDependencies": {
+    "react-native": "*"
+  },
+  "devDependencies": {
+    "react": "16.13.1",
+    "react-native": "0.63.4"
+  }
+}

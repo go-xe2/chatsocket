@@ -1,0 +1,41 @@
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:3.5.3")
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 29
+    buildToolsVersion = "29.0.2"
+
+    defaultConfig {
+        minSdkVersion 23
+        targetSdkVersion 29
+        versionCode 1
+        versionName "1.0"
+    }
+    lintOptions {
+        abortOnError false
+    }
+}
+
+repositories {
+    maven {
+        url("https://maven.aliyun.com/repository/google")
+    }
+    maven {
+        url("https://maven.aliyun.com/repository/public")
+    }
+}
+
+dependencies {
+    implement 'com.facebook.react:react-native:+'
+    implement "org.java-websocket:Java-WebSocket:1.3.7"
+}
