@@ -24,4 +24,10 @@ public class RNChatsocketModule extends ReactContextBaseJavaModule {
   public String Version() {
     return "v1.0.0";
   }
+
+  @ReactMethod(isBlockingSynchronousMethod = false)
+  public String IMHost() {
+    SettingManager setting = new SettingManager(this.getReactApplicationContext());
+    return setting.GetIMHost();
+  }
 }
