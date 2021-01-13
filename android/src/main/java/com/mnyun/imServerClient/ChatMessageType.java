@@ -5,7 +5,7 @@ public enum ChatMessageType {
     Unknown,
     Text,
     Emoji,
-    Vol,
+    Voice,
     Pic,
     File,
     Location,

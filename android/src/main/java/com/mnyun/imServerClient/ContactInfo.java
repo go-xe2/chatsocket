@@ -1,12 +1,14 @@
 package com.mnyun.imServerClient;
 
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.WritableMap;
+
 import java.util.List;
 
 /**
  * 联系人信息
  */
-public class ContactInfo {
-    private String userId;
+public class ContactInfo implements WritableConvert {
     public String getUserId() {
         return userId;
     }
@@ -47,6 +49,7 @@ public class ContactInfo {
         this.msgCount = msgCount;
     }
 
+    private String userId;
     private String nickName;
     private String avatarUrl;
     private UserSex sex;
@@ -82,4 +85,16 @@ public class ContactInfo {
     }
 
     private SenderType senderType;
+
+    @Override
+    public WritableMap toWritableMap() {
+        WritableMap map = Arguments.createMap();
+        map.putInt("senderType", this.senderType.ordinal());
+        map.putString("userId", this.userId);
+        map.putString("nickName", this.nickName);
+        map.putString("avatarUrl", this.avatarUrl);
+        map.putString("extra", this.extra);
+        map.putInt("sex", this.sex.ordinal());
+        return map;
+    }
 }

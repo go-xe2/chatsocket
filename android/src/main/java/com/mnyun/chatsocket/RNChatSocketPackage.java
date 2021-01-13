@@ -10,10 +10,10 @@ import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.uimanager.ViewManager;
 import com.facebook.react.bridge.JavaScriptModule;
-public class RNChatsocketPackage implements ReactPackage {
+public class RNChatSocketPackage implements ReactPackage {
     @Override
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
-      return Arrays.<NativeModule>asList(new RNChatsocketModule(reactContext));
+      return Arrays.<NativeModule>asList(new RNChatSocketModule(reactContext));
     }
 
     // Deprecated from RN 0.47

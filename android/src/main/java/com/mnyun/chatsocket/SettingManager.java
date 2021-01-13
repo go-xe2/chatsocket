@@ -173,41 +173,13 @@ public class SettingManager {
             return null;
         }
         JSONObject obj = new JSONObject(szData);
-        DeviceInfo result = new DeviceInfo();
-        result.uuid = obj.getString("uuid");
-        result.brand = obj.getString("brand");
-        result.mode = obj.getString("mode");
-        result.sysVersion = obj.getString("sysVersion");
-        result.sdkVersion = obj.getString("sdkVersion");
+        String uuid = obj.getString("uuid");
+        String brand = obj.getString("brand");
+        String mode = obj.getString("mode");
+        String sysVersion = obj.getString("sysVersion");
+        String sdkVersion = obj.getString("sdkVersion");
+        DeviceInfo result = new DeviceInfo(uuid, brand, mode, sysVersion, sdkVersion);
         return result;
-    }
-
-    public class DeviceInfo {
-        private String uuid = "";
-        private String brand = "";
-        private String mode = "";
-        private String sysVersion = "";
-        private String sdkVersion = "";
-
-        public String getUuid() {
-            return uuid;
-        }
-
-        public String getBrand() {
-            return brand;
-        }
-
-        public String getMode() {
-            return mode;
-        }
-
-        public String getSysVersion() {
-            return sysVersion;
-        }
-
-        public String getSdkVersion() {
-            return sdkVersion;
-        }
     }
 
 }

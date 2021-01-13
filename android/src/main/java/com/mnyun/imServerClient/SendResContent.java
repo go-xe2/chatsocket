@@ -1,6 +1,9 @@
 package com.mnyun.imServerClient;
 
-public class SendResContent {
+import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.WritableMap;
+
+public class SendResContent implements WritableConvert {
     private int msgId;
     private int seqId;
 
@@ -31,5 +34,11 @@ public class SendResContent {
     }
 
 
-
+    @Override
+    public WritableMap toWritableMap() {
+        WritableMap map = Arguments.createMap();
+        map.putInt("msgId", this.msgId);
+        map.putInt("seq", this.seqId);
+        return map;
+    }
 }

@@ -2,11 +2,13 @@ package com.mnyun.imServerClient;
 
 import android.content.Context;
 
+import com.mnyun.chatsocket.DeviceInfo;
 import com.mnyun.chatsocket.SettingManager;
 import com.mnyun.net.BaseCallback;
 import com.mnyun.net.BaseOkHttpClient;
 import com.mnyun.net.OkHttpManager;
 import com.mnyun.utils.DateUtils;
+import com.mnyun.utils.StringUtils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -59,7 +61,7 @@ public class IMServerClient {
      * @param info
      * @param callback
      */
-    public void regDevice(SettingManager.DeviceInfo info, final IMServerCallback<String> callback) {
+    public void regDevice(DeviceInfo info, final IMServerCallback<String> callback) {
         String url = this.imHttpUrl + "/RegDevice";
         BaseOkHttpClient.newBuilder()
                 .addParam("app_key", this.appKey)
@@ -140,7 +142,7 @@ public class IMServerClient {
      * @param msgId
      * @param callback
      */
-    public void setMessageRead(String token, String msgId, final IMServerCallback callback) {
+    public void setMessageRead(String token, int msgId, final IMServerCallback callback) {
         String url = this.imHttpUrl + "/SetReadMsg";
         BaseOkHttpClient.newBuilder()
                 .addParam("token", token)
@@ -173,7 +175,7 @@ public class IMServerClient {
      * @param msgId
      * @param callback
      */
-    public void delMessage(String token, String msgId, final IMServerCallback callback) {
+    public void delMessage(String token, int msgId, final IMServerCallback callback) {
         String url = this.imHttpUrl + "/DelMsg";
         BaseOkHttpClient.newBuilder()
                 .addParam("token", token)
@@ -275,7 +277,7 @@ public class IMServerClient {
      * @param msg
      * @param callback
      */
-    public void Send(String token, ReceiverType receiverType, String receiverId, String toUserIds, ChatMessageType messageType, String msg, final IMServerCallback<SendResContent> callback) {
+    public void send(String token, ReceiverType receiverType, String receiverId, String toUserIds, ChatMessageType messageType, String msg, final IMServerCallback<SendResContent> callback) {
         String url = this.imHttpUrl + "/Send";
         BaseOkHttpClient.newBuilder()
                 .addParam("token", token)
@@ -315,4 +317,176 @@ public class IMServerClient {
                 });
     }
 
+    /**
+     * 发送聊天事件
+     * @param token
+     * @param receiverId
+     * @param event
+     * @param callback
+     */
+    public void sendEvent(String token, String receiverId, int event, final IMServerCallback callback) {
+        String url = this.imHttpUrl + "/SendChatEvent";
+        BaseOkHttpClient.newBuilder()
+                .addParam("token", token)
+                .addParam("receiver",receiverId)
+                .addParam("event", receiverId)
+                .addParam("event", event)
+                .post()
+                .url(url)
+                .build()
+                .execute(new BaseCallback() {
+                    @Override
+                    public void onSuccess(Object o) {
+                        IMServerResult result = parseJsonResult(o.toString(), null);
+                        callback.onResult(result);
+                    }
+
+                    @Override
+                    public void onError(int code) {
+                        callback.onResult(new IMServerResult(true, "服务错误:" + code));
+                    }
+
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        callback.onResult(new IMServerResult(true, e.getMessage()));
+                    }
+                });
+    }
+
+    /**
+     * 获取消息详情
+     * @param token
+     * @param msgId
+     * @param callback
+     */
+    public void getMsg(String token, int msgId, final IMServerCallback<MsgContent> callback) {
+        String url = this.imHttpUrl + "/GetMsg";
+        BaseOkHttpClient.newBuilder()
+                .addParam("token", token)
+                .addParam("msg_id",msgId)
+                .post()
+                .url(url)
+                .build()
+                .execute(new BaseCallback() {
+                    @Override
+                    public void onSuccess(Object o) {
+                        IMServerResult result = parseJsonResult(o.toString(), new IMContentConvert() {
+                            @Override
+                            public MsgContent Convert(JSONObject content) throws Exception {
+                                JSONObject objContent = content.getJSONObject("content");
+                                MsgContent msg = new MsgContent();
+                                msg.setMsgId(objContent.getInt("msg_id"));
+                                msg.setSeq(objContent.getInt("seq"));
+                                JSONObject sender = objContent.getJSONObject("sender");
+                                int senderType = sender.getInt("sender_type");
+                                msg.setSenderType(SenderType.values()[senderType]);
+                                msg.setSenderId(sender.getString("sender_id"));
+                                msg.setSenderNickName(sender.getString("nick_name"));
+                                msg.setSenderAvatarUrl(sender.getString("avatar_url"));
+                                msg.setSenderExtra(sender.getString("extra"));
+                                int senderSex = sender.getInt("sex");
+                                msg.setSenderSex(UserSex.values()[senderSex]);
+                                int receiverType = objContent.getInt("receiver_type");
+                                msg.setReceiverType(ReceiverType.values()[receiverType]);
+                                msg.setReceiverId(objContent.getString("receiver_id"));
+                                msg.setToUserIds(objContent.getString("to_user_ids"));
+                                int messageType = objContent.getInt("message_type");
+                                msg.setMessageType(ChatMessageType.values()[messageType]);
+                                msg.setContent(objContent.getString("message_content"));
+                                msg.setSendTime(objContent.getString("send_time"));
+                                int msgStatus = objContent.getInt("status");
+                                msg.setStatus(MessageStatus.values()[msgStatus]);
+                                msg.setReadCount(objContent.getInt("read_count"));
+                                msg.setSenderMsgId(objContent.getInt("sender_msg_id"));
+                                return msg;
+                            }
+                        });
+                        callback.onResult(result);
+                    }
+
+                    @Override
+                    public void onError(int code) {
+                        callback.onResult(new IMServerResult(true, "服务错误:" + code));
+                    }
+
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        callback.onResult(new IMServerResult(true, e.getMessage()));
+                    }
+                });
+    }
+
+    /**
+     * 获取大于seq的消息，用于同步本地和远程的消息
+     * @param token
+     * @param seq
+     * @param count
+     * @param callback
+     */
+    public void syncMessageList(String token, int seq, int count, final IMServerCallback<MsgContentList> callback) {
+        String url = this.imHttpUrl + "/SyncMsg";
+        BaseOkHttpClient.newBuilder()
+                .addParam("token", token)
+                .addParam("seq",seq)
+                .addParam("count", count)
+                .post()
+                .url(url)
+                .build()
+                .execute(new BaseCallback() {
+                    @Override
+                    public void onSuccess(Object o) {
+                        IMServerResult result = parseJsonResult(o.toString(), new IMContentConvert<MsgContentList>() {
+                            @Override
+                            public MsgContentList Convert(JSONObject content) throws Exception {
+                                JSONObject obj = content.getJSONObject("content");
+                                MsgContentList list = new MsgContentList();
+                                list.setEnd(obj.getInt("is_end") == 1);
+                                JSONArray rows = obj.getJSONArray("rows");
+                                List<MsgContent> listRows = new ArrayList();
+                                list.setRows(listRows);
+                                for (int i = 0; i < rows.length(); i++) {
+                                    JSONObject row = rows.getJSONObject(i);
+                                    MsgContent msg = new MsgContent();
+                                    msg.setMsgId(row.getInt("msg_id"));
+                                    msg.setSeq(row.getInt("seq"));
+                                    JSONObject sender = row.getJSONObject("sender");
+                                    int senderType = sender.getInt("sender_type");
+                                    msg.setSenderType(SenderType.values()[senderType]);
+                                    msg.setSenderId(sender.getString("sender_id"));
+                                    msg.setSenderNickName(sender.getString("nick_name"));
+                                    msg.setSenderAvatarUrl(sender.getString("avatar_url"));
+                                    msg.setSenderExtra(sender.getString("extra"));
+                                    int senderSex = sender.getInt("sex");
+                                    msg.setSenderSex(UserSex.values()[senderSex]);
+                                    int receiverType = row.getInt("receiver_type");
+                                    msg.setReceiverType(ReceiverType.values()[receiverType]);
+                                    msg.setReceiverId(row.getString("receiver_id"));
+                                    msg.setToUserIds(row.getString("to_user_ids"));
+                                    int messageType = row.getInt("message_type");
+                                    msg.setMessageType(ChatMessageType.values()[messageType]);
+                                    msg.setContent(row.getString("message_content"));
+                                    msg.setSendTime(row.getString("send_time"));
+                                    int msgStatus = row.getInt("status");
+                                    msg.setStatus(MessageStatus.values()[msgStatus]);
+                                    msg.setReadCount(row.getInt("read_count"));
+                                    msg.setSenderMsgId(row.getInt("sender_msg_id"));
+                                    listRows.add(msg);
+                                }
+                                return list;
+                            }
+                        });
+                        callback.onResult(result);
+                    }
+
+                    @Override
+                    public void onError(int code) {
+                        callback.onResult(new IMServerResult(true, "服务错误:" + code));
+                    }
+
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        callback.onResult(new IMServerResult(true, e.getMessage()));
+                    }
+                });
+    }
 }
