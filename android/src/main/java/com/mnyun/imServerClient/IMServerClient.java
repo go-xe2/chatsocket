@@ -25,12 +25,10 @@ public class IMServerClient {
     private Context mContext;
     private SettingManager setting;
     private String imHttpUrl;
-    private String appKey;
-    private String appSecret;
     public IMServerClient(Context applicationContext) {
         super();
         this.mContext = applicationContext;
-        this.setting = new SettingManager(applicationContext);
+        this.setting = new SettingManager(this.mContext);
         this.imHttpUrl = this.setting.getIMHttpUrl();
     }
 
@@ -61,11 +59,11 @@ public class IMServerClient {
      * @param info
      * @param callback
      */
-    public void regDevice(DeviceInfo info, final IMServerCallback<String> callback) {
+    public void regDevice(String appKey, String appSecret, DeviceInfo info, final IMServerCallback<String> callback) {
         String url = this.imHttpUrl + "/RegDevice";
         BaseOkHttpClient.newBuilder()
-                .addParam("app_key", this.appKey)
-                .addParam("app_secret", this.appSecret)
+                .addParam("app_key", appKey)
+                .addParam("app_secret", appSecret)
                 .addParam("uuid", info.getUuid())
                 .addParam("brand", info.getBrand())
                 .addParam("dtype", 1) // 0:未知设备,1:android,2:ios,3:windows,4:macos,5:web

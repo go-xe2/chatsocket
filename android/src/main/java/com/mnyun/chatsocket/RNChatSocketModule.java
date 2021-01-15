@@ -1,16 +1,29 @@
 
 package com.mnyun.chatsocket;
 
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.IBinder;
+import android.util.Log;
+
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
-import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.mnyun.imServerClient.ChatMessageType;
 import com.mnyun.imServerClient.ContactPage;
 import com.mnyun.imServerClient.IMServerCallback;
@@ -24,21 +37,81 @@ import com.mnyun.imServerClient.SendResContent;
 import com.mnyun.imServerClient.SenderType;
 import com.mnyun.imServerClient.UserInfo;
 import com.mnyun.imServerClient.UserSex;
+import com.mnyun.utils.ChatSocketException;
+import com.mnyun.utils.ReactUtils;
 import com.mnyun.utils.StringUtils;
 
 import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.util.HashMap;
 import java.util.Map;
 
-public class RNChatSocketModule extends ReactContextBaseJavaModule {
+public class RNChatSocketModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
   private final ReactApplicationContext reactContext;
-  private SettingManager settingManager;
-  private IMServerClient imClient;
+  private final SettingManager settingManager;
+  private final IMServerClient imClient;
+  private Intent chatServiceIndent;
+  @RequiresApi(api = Build.VERSION_CODES.O)
   public RNChatSocketModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
     this.settingManager = new SettingManager(reactContext);
     this.imClient = new IMServerClient(reactContext);
+    startChatService();
+    // 注册接收者
+    reactContext.registerReceiver(chatReceiver, new IntentFilter(ChatSocketConstants.CST_BROADCAST_CHAT_ACTION));
+  }
+
+  /**
+   * 启动即时消息服务客户端
+   */
+  @RequiresApi(api = Build.VERSION_CODES.O)
+  private void startChatService() {
+    chatServiceIndent = createChatServiceIndent();
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      reactContext.startForegroundService(chatServiceIndent);
+    } else {
+      reactContext.startService(chatServiceIndent);
+    }
+  }
+
+  /**
+   * 停止chatService服务
+   */
+  private void stopChatService() {
+    if (chatServiceIndent != null) {
+      reactContext.stopService(chatServiceIndent);
+    }
+  }
+
+  /**
+   * 创建chatService服务的Indent
+   * @return
+   */
+  private Intent createChatServiceIndent() {
+    Intent chatServiceIndent = new Intent(reactContext, ChatService.class);
+    Bundle params = new Bundle();
+    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_WS_HOST_PARAM, this.settingManager.getIMHost());
+    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_HTTP_URL_PARAM, this.settingManager.getIMHttpUrl());
+    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_USER_ID_PARAM, this.settingManager.getUserID());
+    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_USER_TOKEN_PARAM, this.settingManager.getUserToken());
+    try {
+      DeviceInfo deviceInfo = this.settingManager.getDeviceInfo();
+      if (deviceInfo != null) {
+        Bundle deviceParams = new Bundle();
+        deviceParams.putString("uuid", deviceInfo.getUuid());
+        deviceParams.putString("brand", deviceInfo.getBrand());
+        deviceParams.putString("mode", deviceInfo.getMode());
+        deviceParams.putString("sysVersion", deviceInfo.getSdkVersion());
+        deviceParams.putString("sdkVersion", deviceInfo.getSdkVersion());
+        params.putBundle(ChatSocketConstants.CST_CHAT_SERVICE_DEVICE_INFO_PARAM, deviceParams);
+      }
+    } catch (JSONException e) {
+      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "从配置中读取deviceInfo出错:" + e.getMessage());
+    }
+    chatServiceIndent.putExtra("params", params);
+    return chatServiceIndent;
   }
 
   @Override
@@ -281,7 +354,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule {
    * @param promise
    */
   @ReactMethod
-  public void sendEvent(ReadableMap options, final Promise promise) {
+  public void sendChatEvent(ReadableMap options, final Promise promise) {
     try {
       String token = StringUtils.emptyDefault(options.getString("token"), "");
       String receiverId = StringUtils.emptyDefault(options.getString("receiverId"), "");
@@ -354,7 +427,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule {
    * @param promise
    */
   @ReactMethod
-  public void GetContactList(ReadableMap options, final Promise promise) {
+  public void getContactList(ReadableMap options, final Promise promise) {
     try {
       String token = StringUtils.emptyDefault(options.getString("token"), "");
       String search = StringUtils.emptyDefault(options.getString("search"), "");
@@ -433,7 +506,9 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule {
     try {
       DeviceInfo deviceInfo = new DeviceInfo();
       deviceInfo.fromReadableMap(options);
-      this.imClient.regDevice(deviceInfo, new IMServerCallback<String>() {
+      String token = this.settingManager.getUserToken();
+      String userId = this.getUserID();
+      this.imClient.regDevice(token, userId, deviceInfo, new IMServerCallback<String>() {
         @Override
         public void onResult(IMServerResult<String> result) {
           promise.resolve(result.toWritableMap());
@@ -471,34 +546,147 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule {
       promise.resolve(result);
     }
   }
+
+  /**
+   * 在连接上绑定用户
+   * @param options
+   * @param promise
+   */
+  @ReactMethod
+  public void userSignIn(ReadableMap options, final Promise promise) {
+    try {
+//      String token = StringUtils.emptyDefault(options.getString("token"), "");
+//      String userId = StringUtils.emptyDefault(options.getString("userId"), "");
+//      WritableMap res = Arguments.createMap();;
+//      if (StringUtils.isBlank(token) || StringUtils.isBlank(userId)) {
+//        res.putBoolean("error", true);
+//        res.putString("msg", "token或userId不能为空");
+//        promise.resolve(res);
+//        return;
+//      }
+//      if (chatServiceBinder == null) {
+//        res.putBoolean("error", true);
+//        res.putString("msg", "未连接到chatService服务");
+//        return;
+//      }
+//      chatServiceBinder.userSignIn(token, userId);
+//      res.putBoolean("error", false);
+//      res.putString("msg", "操作成功,在onSignInResp事件中获取操作结果");
+      promise.resolve(false);
+    } catch (Exception e) {
+      WritableMap result = Arguments.createMap();
+      result.putBoolean("error", true);
+      result.putString("msg", e.getMessage());
+      promise.resolve(result);
+    }
+  }
+
+  /**
+   * 手动连接
+   * @param options
+   * @param promise
+   */
+  @ReactMethod
+  public void socketConnect(ReadableMap options, final Promise promise) {
+    try {
+//      WritableMap res = Arguments.createMap();;
+//      if (chatServiceBinder == null) {
+//        res.putBoolean("error", true);
+//        res.putString("msg", "未连接到chatService服务");
+//        return;
+//      }
+//      chatServiceBinder.Connect();
+//      res.putBoolean("error", false);
+//      res.putString("msg", "操作成功");
+      promise.resolve(false);
+    } catch (Exception e) {
+      WritableMap result = Arguments.createMap();
+      result.putBoolean("error", true);
+      result.putString("msg", e.getMessage());
+      promise.resolve(result);
+    }
+  }
+
   @Nullable
   @Override
   public Map<String, Object> getConstants() {
-    Map result = super.getConstants();
-    result.put(ChatSocketConstants.CST_SENDER_TYPE_UNKNOWN, SenderType.Unknown);
-    result.put(ChatSocketConstants.CST_SENDER_TYPE_IM, SenderType.IM);
-    result.put(ChatSocketConstants.CST_SENDER_TYPE_USER, SenderType.User);
-    result.put(ChatSocketConstants.CST_SENDER_TYPE_BUSINESS, SenderType.Business);
-    result.put(ChatSocketConstants.CST_RECEIVER_TYPE_UNKNOWN, ReceiverType.Unknown);
-    result.put(ChatSocketConstants.CST_RECEIVER_TYPE_USER, ReceiverType.User);
-    result.put(ChatSocketConstants.CST_RECEIVER_TYPE_GROUP, ReceiverType.Group);
-    result.put(ChatSocketConstants.CST_USER_SEX_UNKNOWN, UserSex.Unknown);
-    result.put(ChatSocketConstants.CST_USER_SEX_BOY, UserSex.Boy);
-    result.put(ChatSocketConstants.CST_USER_SEX_GIRL, UserSex.Girl);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_UNKNOWN, ChatMessageType.Unknown);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_TEXT, ChatMessageType.Text);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_EMOJI, ChatMessageType.Emoji);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_VOICE, ChatMessageType.Voice);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_PIC, ChatMessageType.Pic);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_FILE, ChatMessageType.File);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_LOCATION, ChatMessageType.Location);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_CMD, ChatMessageType.Cmd);
-    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_DEFINE, ChatMessageType.Define);
-    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_UNKNOWN, MessageStatus.Unknown);
-    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_NORMAL, MessageStatus.Normal);
-    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_RECALL, MessageStatus.Recall);
-    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_READ, MessageStatus.Read);
-    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_BE_READ, MessageStatus.BeRead);
+    final Map<String, Object> result = new HashMap<>();
+    result.put(ChatSocketConstants.CST_SENDER_TYPE_UNKNOWN, SenderType.Unknown.ordinal());
+    result.put(ChatSocketConstants.CST_SENDER_TYPE_IM, SenderType.IM.ordinal());
+    result.put(ChatSocketConstants.CST_SENDER_TYPE_USER, SenderType.User.ordinal());
+    result.put(ChatSocketConstants.CST_SENDER_TYPE_BUSINESS, SenderType.Business.ordinal());
+    result.put(ChatSocketConstants.CST_RECEIVER_TYPE_UNKNOWN, ReceiverType.Unknown.ordinal());
+    result.put(ChatSocketConstants.CST_RECEIVER_TYPE_USER, ReceiverType.User.ordinal());
+    result.put(ChatSocketConstants.CST_RECEIVER_TYPE_GROUP, ReceiverType.Group.ordinal());
+    result.put(ChatSocketConstants.CST_USER_SEX_UNKNOWN, UserSex.Unknown.ordinal());
+    result.put(ChatSocketConstants.CST_USER_SEX_BOY, UserSex.Boy.ordinal());
+    result.put(ChatSocketConstants.CST_USER_SEX_GIRL, UserSex.Girl.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_UNKNOWN, ChatMessageType.Unknown.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_TEXT, ChatMessageType.Text.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_EMOJI, ChatMessageType.Emoji.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_VOICE, ChatMessageType.Voice.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_PIC, ChatMessageType.Pic.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_FILE, ChatMessageType.File.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_LOCATION, ChatMessageType.Location.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_CMD, ChatMessageType.Cmd.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_TYPE_DEFINE, ChatMessageType.Define.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_UNKNOWN, MessageStatus.Unknown.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_NORMAL, MessageStatus.Normal.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_RECALL, MessageStatus.Recall.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_READ, MessageStatus.Read.ordinal());
+    result.put(ChatSocketConstants.CST_MESSAGE_STATUS_BE_READ, MessageStatus.BeRead.ordinal());
     return result;
+  }
+
+  @Override
+  public void onHostResume() {
+    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "onHostResume");
+  }
+
+  @Override
+  public void onHostPause() {
+    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "onHostPause");
+  }
+
+  @Override
+  public void onHostDestroy() {
+    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "onHostDestroy");
+  }
+
+  /**
+   * chat事件接收
+   */
+  final BroadcastReceiver chatReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+      if (intent == null) {
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive intent is null.");
+        return;
+      }
+      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive action:" + intent.getAction());
+      if (ChatSocketConstants.CST_BROADCAST_CHAT_ACTION.equals(intent.getAction())) {
+        return;
+      }
+      Bundle params = intent.getExtras();
+      String event = params.getString("event");
+      String data = params.getString("content");
+      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive data:" + params.toString());
+      emitChatData(event, data);
+    }
+  };
+
+  private void emitChatData(String event, String data) {
+    DeviceEventManagerModule.RCTDeviceEventEmitter emitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+    if (emitter != null) {
+      try {
+        JSONObject obj = new JSONObject(data);
+        WritableMap params = ReactUtils.convertJsonObjectToWritable(obj);
+        emitter.emit(event, params);
+      } catch (ChatSocketException e1) {
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "emitChatData error:" + e1.getMessage());
+      } catch (JSONException e) {
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "emitChatData error:" + e.getMessage());
+      }
+    }
   }
 }

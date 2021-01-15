@@ -1,6 +1,6 @@
 
 import { NativeModules } from 'react-native';
-const { RNChatsocket } = NativeModules;
+const { RNChatSocket } = NativeModules;
 
 
 /**
@@ -8,7 +8,7 @@ const { RNChatsocket } = NativeModules;
  * @returns {*}
  */
 const getVersion = () => {
-    return RNChatsocket.getVersion();
+    return RNChatSocket.getVersion();
 };
 
 /**
@@ -16,7 +16,7 @@ const getVersion = () => {
  * @returns {*}
  */
 const getIMHost =  () => {
-    return RNChatsocket.getIMHost();
+    return RNChatSocket.getIMHost();
 };
 
 /**
@@ -24,7 +24,30 @@ const getIMHost =  () => {
  * @returns {*}
  */
 const  getDeviceID = () => {
-    return RNChatsocket.getDeviceID();
+    return RNChatSocket.getDeviceID();
+};
+
+const getDeviceInfo = async () => {
+    return await RNChatSocket.getDeviceInfo();
+};
+
+/**
+ * 保存设备信息
+ * @param uuid
+ * @param brand
+ * @param mode
+ * @param sysVersion
+ * @param sdkVersion
+ * @returns {Promise<*>}
+ */
+const saveDeviceInfo = async ({
+    uuid = '',
+    brand = '',
+    mode = '',
+    sysVersion = '',
+    sdkVersion = '',
+}) => {
+    return await RNChatSocket.saveDeviceInfo({ uuid, brand, mode, sysVersion, sdkVersion });
 };
 
 /**
@@ -32,7 +55,7 @@ const  getDeviceID = () => {
  * @returns {*}
  */
 const getAppKey = () => {
-    return RNChatsocket.getAppKey();
+    return RNChatSocket.getAppKey();
 };
 
 /**
@@ -40,14 +63,14 @@ const getAppKey = () => {
  * @returns {*}
  */
 const getAppSecret = () => {
-    return RNChatsocket.getAppSecret();
+    return RNChatSocket.getAppSecret();
 };
 /**
  * 获取用户令牌
  * @returns {*}
  */
 const  getUserToken = () => {
-    return RNChatsocket.getUserToken();
+    return RNChatSocket.getUserToken();
 };
 
 /**
@@ -55,7 +78,7 @@ const  getUserToken = () => {
  * @returns {*}
  */
 const getUserID = () => {
-    return RNChatsocket.getUserID();
+    return RNChatSocket.getUserID();
 };
 
 /**
@@ -63,7 +86,7 @@ const getUserID = () => {
  * @returns {*}
  */
 const getUserNickName = () => {
-    return RNChatsocket.getUserNickName();
+    return RNChatSocket.getUserNickName();
 };
 
 /**
@@ -71,7 +94,7 @@ const getUserNickName = () => {
  * @returns {*}
  */
 const getUserAvatarUrl = () => {
-    return RNChatsocket.getUserAvatarUrl();
+    return RNChatSocket.getUserAvatarUrl();
 };
 
 /**
@@ -80,7 +103,7 @@ const getUserAvatarUrl = () => {
  * @returns {Promise<*>}
  */
 const saveUserToken = async (token) => {
-    return await RNChatsocket.saveUserToken(token);
+    return await RNChatSocket.saveUserToken(token);
 };
 
 /**
@@ -89,7 +112,7 @@ const saveUserToken = async (token) => {
  * @returns {Promise<*>}
  */
 const saveUserID = async (userID) => {
-    return await RNChatsocket.saveUserID(userID);
+    return await RNChatSocket.saveUserID(userID);
 };
 
 /**
@@ -98,7 +121,7 @@ const saveUserID = async (userID) => {
  * @returns {Promise<*>}
  */
  const  saveUserNickName = async (nickName) => {
-    return await RNChatsocket.saveUserNickName(nickName);
+    return await RNChatSocket.saveUserNickName(nickName);
 };
 
 /**
@@ -107,8 +130,97 @@ const saveUserID = async (userID) => {
  * @returns {Promise<*>}
  */
 const saveUserAvatarUrl = async (avatarUrl) => {
-    return await RNChatsocket.saveUserAvatarUrl(avatarUrl);
+    return await RNChatSocket.saveUserAvatarUrl(avatarUrl);
 }
+
+const sendMessage = async ({
+    token = '',
+    receiverType = 1,
+    receiverId = '',
+    toUserIds = '',
+    messageType = 1,
+    content = '',
+}) => {
+    return await RNChatSocket.sendMessage({ token, receiverType, receiverId, toUserIds, messageType, content });
+}
+
+const sendChatEvent = async ({
+    token = '',
+    receiverId = '',
+    event = 0,
+}) => {
+   return await RNChatSocket.sendChatEvent({ token, receiverId, event });
+};
+
+const setMessageRead = async ({
+    token = '',
+    msgId = 0,
+}) => {
+    return await RNChatSocket.setMessageRead({ token, msgId });
+};
+
+const getMessage = async ({
+    token = '',
+    msgId = 0,
+}) => {
+    return await RNChatSocket.getMessage({ token, msgId });
+};
+
+const getContactList = async ({
+    token = '',
+    search = '',
+    pi = 1,
+    ps = 50,
+}) => {
+    return await RNChatSocket.getContactList({ token, search, pi, ps });
+};
+
+const syncMessageList = async ({
+    token = '',
+    seq = 0,
+    count = 100,
+}) => {
+    return await RNChatSocket.syncMessageList({ token, seq, count });
+};
+
+const delMessage = async ({
+    token = '',
+    msgId = 0,
+}) => {
+    return await RNChatSocket.delMessage({ token, msgId });
+};
+
+const registerDevice = async ({
+    uuid = '',
+    brand = '',
+    mode = '',
+    sysVersion = '',
+    sdkVersion = '',
+}) => {
+    return await RNChatSocket.registerDevice({ uuid, brand, mode, sysVersion, sdkVersion });
+};
+
+const registerUser = async ({
+    token = '',
+    nickName = '',
+    avatarUrl = '',
+    sex = 0,
+    extra = '',
+    mobile = '',
+}) => {
+    return await RNChatSocket.registerUser({ token, nickName, avatarUrl, sex, extra, mobile });
+};
+
+const userSignIn = async ({
+    token = '',
+    userId = '',
+}) => {
+    return await RNChatSocket.userSignIn({ token, userId });
+};
+
+const socketConnect = async () => {
+    return await RNChatSocket.socketConnect({});
+};
 
 export default {
     getVersion,
@@ -116,6 +228,8 @@ export default {
     getAppKey,
     getAppSecret,
     getDeviceID,
+    getDeviceInfo,
+    saveDeviceInfo,
     getUserToken,
     getUserID,
     getUserNickName,
@@ -124,4 +238,15 @@ export default {
     saveUserID,
     saveUserNickName,
     saveUserAvatarUrl,
+    sendMessage,
+    sendChatEvent,
+    setMessageRead,
+    getMessage,
+    getContactList,
+    syncMessageList,
+    delMessage,
+    registerDevice,
+    registerUser,
+    userSignIn,
+    socketConnect
 };

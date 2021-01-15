@@ -2,6 +2,7 @@ package com.mnyun.chatsocket;
 
 import android.os.Handler;
 import android.os.Message;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -36,15 +37,6 @@ public class ChatSocketHeartbeat implements Heartbeat {
     private ChatSocket getSocket() {
         return this.socket.get();
     }
-    private Handler handler = new Handler(){
-        @Override
-        public void handleMessage(@NonNull Message msg) {
-            super.handleMessage(msg);
-            if (msg.arg1 == MSG_STOP_SIGN) {
-                ChatSocketHeartbeat.this.stop();
-            }
-        }
-    };
 
     private Runnable heartbeatRunnable = new Runnable() {
         //创建 run 方法
@@ -53,11 +45,12 @@ public class ChatSocketHeartbeat implements Heartbeat {
             try {
                 ChatSocket socket = ChatSocketHeartbeat.this.getSocket();
                 if (socket == null) {
-                    Message msg = new Message();
-                    msg.arg1 = MSG_STOP_SIGN;
-                    handler.sendMessage(msg);
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "ChatSocket已经关闭, 停止发送心跳");
+                    ChatSocketHeartbeat.this.stop();
+                   return;
                 }
                 socket.send(PING_MSG_TEXT);
+                Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "ping");
             } catch (Exception e) {
             }
         }

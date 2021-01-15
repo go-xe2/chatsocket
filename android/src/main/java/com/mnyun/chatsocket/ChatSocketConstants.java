@@ -1,5 +1,7 @@
 package com.mnyun.chatsocket;
 
+import com.mnyun.utils.StringUtils;
+
 import java.security.PublicKey;
 
 public class ChatSocketConstants {
@@ -35,4 +37,17 @@ public class ChatSocketConstants {
     public static final String CST_MESSAGE_STATUS_RECALL="MESSAGE_STATUS_RECALL";
     public static final String CST_MESSAGE_STATUS_READ="MESSAGE_STATUS_READ";
     public static final String CST_MESSAGE_STATUS_BE_READ="MESSAGE_STATUS_BE_READ";
+    public static final String CST_BROADCAST_CHAT_ACTION = "com.mnyun.chatsocket.action.chat";
+    public static final String CST_ON_CHAT_OPEN_EVENT = "ON_CHAT_OPEN";
+    public static final String CST_ON_CHAT_CLOSE_EVENT = "ON_CHAT_CLOSE";
+    public static final String CST_ON_CHAT_SIGN_IN_RESP_EVENT = "ON_CHAT_SIGN_IN_RESP";
+    public static final String CST_ON_CHAT_SIGN_OUT_RESP_EVENT = "ON_CHAT_SEND_MSG_RESP";
+    public static final String CST_ON_CHAT_MESSAGE_EVENT = "ON_CHAT_MESSAGE";
+    public static final String CST_ON_CHAT_SEND_MESSAGE_RESP_EVENT = "ON_CHAT_SEND_MESSAGE_RESP";
+    public static final String CST_ON_CHAT_ERROR_EVENT = "ON_CHAT_ERROR";
+    public static final String CST_CHAT_SERVICE_WS_HOST_PARAM = "WS_HOST"; // chatService 服务的webSocket 地址
+    public static final String CST_CHAT_SERVICE_HTTP_URL_PARAM = "HTTP_URL"; // chatService 服务的http地址
+    public static final String CST_CHAT_SERVICE_USER_ID_PARAM = "USER_ID"; // chatService user_id参数名
+    public static final String CST_CHAT_SERVICE_USER_TOKEN_PARAM = "USER_TOKEN"; // chatService 服务的 user_token参数
+    public static final String CST_CHAT_SERVICE_DEVICE_INFO_PARAM = "DEVICE_INFO"; // chatService服务的device_info参数名
 }
