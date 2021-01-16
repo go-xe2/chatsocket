@@ -153,7 +153,6 @@ public class ChatClient implements ChatSocket {
     }
 
     protected void onMessageHandler(String message) {
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "webSocket onMessage:" + message);
         if ("ping".equals(message)) {
             this.send(CHAT_PONG_MSG);
             return;

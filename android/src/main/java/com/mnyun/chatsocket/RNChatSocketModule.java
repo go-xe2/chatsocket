@@ -15,14 +15,19 @@ import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.facebook.react.ReactApplication;
+import com.facebook.react.ReactInstanceManager;
+import com.facebook.react.ReactNativeHost;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactBridge;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.module.annotations.ReactModule;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.mnyun.imServerClient.ChatMessageType;
 import com.mnyun.imServerClient.ContactPage;
@@ -48,19 +53,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RNChatSocketModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
-  private final ReactApplicationContext reactContext;
+  private static ReactApplicationContext reactContext;
   private final SettingManager settingManager;
   private final IMServerClient imClient;
   private Intent chatServiceIndent;
+  private static RNChatSocketModule instance;
   @RequiresApi(api = Build.VERSION_CODES.O)
   public RNChatSocketModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
     this.settingManager = new SettingManager(reactContext);
     this.imClient = new IMServerClient(reactContext);
+    instance = this;
     startChatService();
-    // 注册接收者
-    reactContext.registerReceiver(chatReceiver, new IntentFilter(ChatSocketConstants.CST_BROADCAST_CHAT_ACTION));
+//     注册接收者
+//    com.mnyun.chatsocket.action.chat
+//    reactContext.registerReceiver(new ChatBroadcastReceiver(this), new IntentFilter(ChatSocketConstants.CST_BROADCAST_CHAT_ACTION));
   }
 
   /**
@@ -653,10 +661,29 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
     Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "onHostDestroy");
   }
 
-  /**
-   * chat事件接收
-   */
-  final BroadcastReceiver chatReceiver = new BroadcastReceiver() {
+//  /**
+//   * chat事件接收
+//   */
+//  final BroadcastReceiver chatReceiver = new BroadcastReceiver() {
+//    @Override
+//    public void onReceive(Context context, Intent intent) {
+//      if (intent == null) {
+//        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive intent is null.");
+//        return;
+//      }
+//      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive action:" + intent.getAction());
+//      if (ChatSocketConstants.CST_BROADCAST_CHAT_ACTION.equals(intent.getAction())) {
+//        return;
+//      }
+//      Bundle params = intent.getExtras();
+//      String event = params.getString("event");
+//      String data = params.getString("content");
+//      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive data:" + params.toString());
+//      emitChatData(event, data);
+//    }
+//  };
+
+  public static class ChatBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
       if (intent == null) {
@@ -664,24 +691,17 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
         return;
       }
       Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive action:" + intent.getAction());
-      if (ChatSocketConstants.CST_BROADCAST_CHAT_ACTION.equals(intent.getAction())) {
+      if (!ChatSocketConstants.CST_BROADCAST_CHAT_ACTION.equals(intent.getAction())) {
         return;
       }
       Bundle params = intent.getExtras();
       String event = params.getString("event");
       String data = params.getString("content");
       Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive data:" + params.toString());
-      emitChatData(event, data);
-    }
-  };
-
-  private void emitChatData(String event, String data) {
-    DeviceEventManagerModule.RCTDeviceEventEmitter emitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
-    if (emitter != null) {
       try {
         JSONObject obj = new JSONObject(data);
-        WritableMap params = ReactUtils.convertJsonObjectToWritable(obj);
-        emitter.emit(event, params);
+        WritableMap paramMap = ReactUtils.convertJsonObjectToWritable(obj);
+        ChatManager.getInstance().emitEvent(context, intent, event, paramMap);
       } catch (ChatSocketException e1) {
         Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "emitChatData error:" + e1.getMessage());
       } catch (JSONException e) {

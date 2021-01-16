@@ -278,6 +278,7 @@ public class ChatService extends Service implements ChatClientHandler{
         intent.setAction(ChatSocketConstants.CST_BROADCAST_CHAT_ACTION);
         intent.putExtra("event", event);
         intent.putExtra("content", data.toString());
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "广播消息: event" + event + ", data:"  + data.toString());
         sendBroadcast(intent);
     }
 }
