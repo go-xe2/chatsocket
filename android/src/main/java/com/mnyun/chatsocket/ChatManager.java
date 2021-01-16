@@ -18,8 +18,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ChatManager {
-    private static Context appContext;
-    private static ChatManagerInitHandler initHandler;
+    private Context appContext;
+    private ChatManagerInitHandler initHandler;
     private final static class chatManagerInstance {
         private final static ChatManager instance = new ChatManager();
     }
@@ -34,13 +34,13 @@ public class ChatManager {
         this.initHandler = handler;
     }
     public ReactContext getReactAppContext() {
-        if (appContext == null) {
+        if (this.appContext == null) {
             return null;
         }
-        if (!(appContext instanceof ReactApplication)) {
+        if (!(this.appContext instanceof ReactApplication)) {
             return null;
         }
-        ReactApplication app = (ReactApplication)appContext;
+        ReactApplication app = (ReactApplication)this.appContext;
         ReactInstanceManager instanceManager = app.getReactNativeHost().getReactInstanceManager();
         if (instanceManager == null) {
             return null;
