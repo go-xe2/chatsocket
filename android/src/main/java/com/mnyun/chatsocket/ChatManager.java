@@ -1,5 +1,6 @@
 package com.mnyun.chatsocket;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -37,13 +38,20 @@ public class ChatManager {
         if (this.appContext == null) {
             return null;
         }
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "application Context:" + this.appContext.getClass().getName());
         if (!(this.appContext instanceof ReactApplication)) {
             return null;
         }
         ReactApplication app = (ReactApplication)this.appContext;
         ReactInstanceManager instanceManager = app.getReactNativeHost().getReactInstanceManager();
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "instanceManager:" + instanceManager.toString());
         if (instanceManager == null) {
             return null;
+        }
+
+        if (instanceManager.getCurrentReactContext() == null) {
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "currentReactContext is null.");
+            instanceManager.createReactContextInBackground();
         }
         return instanceManager.getCurrentReactContext();
     }
@@ -64,12 +72,53 @@ public class ChatManager {
         }
         DeviceEventManagerModule.RCTDeviceEventEmitter emitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
         if (emitter != null) {
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "emit event:" + eventName + ", data:" + data.toString());
             emitter.emit(eventName, data);
         }
+    }
+
+    /**
+     * 获取通知广播接收器
+     * @return
+     */
+    public Class getNotificationReceiverClass() {
+        if (this.initHandler != null) {
+            return this.initHandler.getNotificationReceiver();
+        }
+        return null;
+    }
+
+    public ChatOptions getOptions() {
+        if (this.initHandler != null) {
+            return this.initHandler.getOptions();
+        }
+        return null;
+    }
+
+    public Intent[] getNotificationStartIntents() {
+        if (this.initHandler != null) {
+            return this.initHandler.getNotificationStartIntents();
+        }
+        return null;
     }
 
     public interface ChatManagerInitHandler {
         // 启动app
        void startApp(Context context, Intent intent);
+       // 获取app通知接收器
+       Class getNotificationReceiver();
+       ChatOptions getOptions();
+       Intent[] getNotificationStartIntents();
+    }
+
+    public static class ChatOptions {
+        public String getAppPackageName() {
+            return appPackageName;
+        }
+
+        public void setAppPackageName(String appPackageName) {
+            this.appPackageName = appPackageName;
+        }
+        private String appPackageName;
     }
 }

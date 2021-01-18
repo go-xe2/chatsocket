@@ -54,13 +54,11 @@ public class ChatService extends Service implements ChatClientHandler{
             }
         }
         this.initSocket();
-        this.startForeground(0, showNotification("免农云", ""));
+        this.startForeground(0,showRunNotification());
         return super.onStartCommand(intent, flags, startId);
     }
 
-    private Notification showNotification(String title, String msg) {
-        //设置消息内容和标题
-        //新建通知管理器
+    private Notification showRunNotification() {
         final NotificationManager notificationManager =
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         // 创建一个Notification对象
@@ -70,9 +68,9 @@ public class ChatService extends Service implements ChatClientHandler{
         // 设置通知的图标
         notification.setSmallIcon(R.drawable.redbox_top_border_background);
         // 设置通知内容的标题
-        notification.setContentTitle(title);
+        notification.setContentTitle("免农云");
         // 设置通知内容
-        notification.setContentText(msg);
+        notification.setContentText("运行中...");
         //设置使用系统默认的声音、默认震动
         notification.setDefaults(Notification.DEFAULT_SOUND
                 | Notification.DEFAULT_VIBRATE);
@@ -87,9 +85,54 @@ public class ChatService extends Service implements ChatClientHandler{
 //        notification.setContentIntent(pi);
         //发送通知
         Notification notif = notification.build();
-        notificationManager.notify(notificationId,notif);
-        notificationId++;
+//        notificationManager.notify(notificationId,notif);
         return notif;
+    }
+
+    private void showNotification(String title, String msg) {
+        //设置消息内容和标题
+        //新建通知管理器
+        Intent intent = new Intent(this, ShowChatNotificationReceiver.class);
+        intent.putExtra("notificationId", notificationId);
+        intent.putExtra("requestCode", notificationId);
+        intent.putExtra("title", title);
+        intent.putExtra("msg", msg);
+        PendingIntent pendingIntent =
+                PendingIntent.getBroadcast(this, notificationId, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        try {
+            pendingIntent.send();
+        } catch (PendingIntent.CanceledException e) {
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, e.getMessage());
+        }
+//        final NotificationManager notificationManager =
+//                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+//        // 创建一个Notification对象
+//        Notification.Builder notification = new Notification.Builder(this);
+//        // 设置打开该通知，该通知自动消失
+//        notification.setAutoCancel(true);
+//        // 设置通知的图标
+//        notification.setSmallIcon(R.drawable.redbox_top_border_background);
+//        // 设置通知内容的标题
+//        notification.setContentTitle(title);
+//        // 设置通知内容
+//        notification.setContentText(msg);
+//        //设置使用系统默认的声音、默认震动
+//        notification.setDefaults(Notification.DEFAULT_SOUND
+//                | Notification.DEFAULT_VIBRATE);
+//        //设置发送时间
+//        notification.setWhen(System.currentTimeMillis());
+//        // 创建一个启动其他Activity的Intent
+////        Intent intent = new Intent(this
+////                , DetailActivity.class);
+////        PendingIntent pi = PendingIntent.getActivity(
+////                NotificationActivity.this, 0, intent, 0);
+//        //设置通知栏点击跳转
+////        notification.setContentIntent(pi);
+//        //发送通知
+//        Notification notif = notification.build();
+//        notificationManager.notify(notificationId,notif);
+        notificationId++;
+//        return notif;
     }
 
     protected void initSocket() {
