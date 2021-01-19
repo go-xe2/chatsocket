@@ -211,15 +211,17 @@ const registerUser = async ({
     return await RNChatSocket.registerUser({ token, nickName, avatarUrl, sex, extra, mobile });
 };
 
-const userSignIn = async ({
+const signIn = async ({
     token = '',
     userId = '',
 }) => {
-    return await RNChatSocket.userSignIn({ token, userId });
+    return await RNChatSocket.signIn({ token, userId });
 };
 
-const socketConnect = async () => {
-    return await RNChatSocket.socketConnect({});
+const signOut = async ({
+    token = '',
+}) => {
+    return await RNChatSocket.signOut({ token });
 };
 
 export default {
@@ -247,6 +249,6 @@ export default {
     delMessage,
     registerDevice,
     registerUser,
-    userSignIn,
-    socketConnect
+    signIn,
+    signOut,
 };

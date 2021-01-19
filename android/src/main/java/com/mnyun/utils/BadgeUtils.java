@@ -1,6 +1,7 @@
 package com.mnyun.utils;
 
 import android.app.Notification;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,9 +10,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
-
-import com.mnyun.chatsocket.R;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -105,20 +103,20 @@ public class BadgeUtils {
      * 应用包名
      * Application package name
      */
-    private static String packageName = null;
+    private static String mPackageName = null;
 
 
     /**
      * context 对象 这里建议传递Application的context 避免内存泄漏
      * It is recommended to pass the Application context to avoid memory leaks.
      */
-    static Context context = null;
+    static Context mAppContext = null;
 
     /**
      * 主Activity的名字 为全路径 比如 com.***..**Activity
      * The name of the main Activity is the full path. For example, com.***..**Activity
      */
-    private static String mainActivityName = null;
+    private static String mLaunchActivityClass = null;
 
     /**
      * notification 对象 小米系统会默认设置 如果修改默认逻辑 必须获取notification对象
@@ -143,65 +141,39 @@ public class BadgeUtils {
 
     /**
      * 初始化 init 建议放在Application中执行
-     * t is recommended to execute in Application
-     *
-     * @param packageNameParameter      @desc 应用包名
-     * @param mainActivityNameParameter @desc MainActivity
-     * @param contextParameter          @desc BaseApplication context
+     * @param packageName
+     * @param launchActivityClass
+     * @param appContext
      */
-    public static void init(String packageNameParameter, String mainActivityNameParameter, Context contextParameter) {
-        packageName = packageNameParameter;
-        context = contextParameter;
-        mainActivityName = mainActivityNameParameter;
+    public static void init(String packageName, String launchActivityClass, Context appContext) {
+        mPackageName = packageName;
+        mAppContext = appContext;
+        mLaunchActivityClass = launchActivityClass;
     }
 
-    /**
-     * @param packageNameParameter  @desc 应用包名
-     * @param mainActivityNameParameter @desc MainActivity
-     * @param notication        通知
-     * @param contextParameter  @desc BaseApplication context
-     */
-    public static void init(String packageNameParameter, String mainActivityNameParameter, Notification notication, Context contextParameter) {
-        packageName = packageNameParameter;
-        context = contextParameter;
-        mainActivityName = mainActivityNameParameter;
+    public void init(String packageName, String launchActivityClass, Context appContext, Notification notifi) {
+        mPackageName = packageName;
+        mAppContext = appContext;
+        mLaunchActivityClass = launchActivityClass;
+        notification = notifi;
     }
 
-    /**
-     * 获取launcher相关信息  根据launcher
-     * 分别开发
-     * <p>
-     * miui: com.miui.home
-     * <p>
-     * huawei: com.huawei.android.launcher
-     * <p>
-     * moto and htc: com.android.launcher
-     * <p>
-     * samsung: com.sec.android.app.launcher
-     * <p>
-     * goole:com.google.android.apps.nexuslauncher
-     * <p>
-     * BaseApplication.getContext() is Application context
-     *
-     * @return
-     */
-    private static String getLauncherMessage() {
-        Intent intent = new Intent(Intent.ACTION_MAIN);
-        intent.addCategory(Intent.CATEGORY_HOME);
-        if (context == null) {
+    private static String getLauncherClassName() {
+        ComponentName launchComponent = getLauncherComponentName(mAppContext);
+        if (launchComponent == null) {
             return "";
         } else {
-            final ResolveInfo res = context
-                    .getPackageManager().resolveActivity(intent, 0);
-            if (res.activityInfo == null) {
-                return "";
-            }
-            if (context.getString(R.string.android).equals(res.activityInfo.packageName)) {
-                return "";
-            }
-            return res.activityInfo.packageName;
+             return launchComponent.getClassName();
         }
+    }
 
+    private static ComponentName getLauncherComponentName(Context context) {
+         Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+         if (launchIntent != null) {
+            return launchIntent.getComponent();
+         } else {
+           return null;
+         }
     }
 
     /**
@@ -213,7 +185,7 @@ public class BadgeUtils {
     public static void setBadgeNumber(int badgeNumber) {
 
         if (badgeNumber >= 0) {
-            switch (getLauncherMessage()) {
+            switch (getLauncherClassName()) {
                 case HUWEI_LAUNCHERNAME:
                     setBadgeNumberHuawei(badgeNumber);
                     break;
@@ -256,7 +228,7 @@ public class BadgeUtils {
      * @param badgeNumber @desc 数量
      */
     private static void setBadgeNumberGoogle(int badgeNumber) {
-        if (TextUtils.isEmpty(packageName)) {
+        if (TextUtils.isEmpty(mPackageName)) {
             return;
         }
         if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) {
@@ -264,9 +236,9 @@ public class BadgeUtils {
         }
         Intent intent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
         intent.putExtra("badge_count", badgeNumber);
-        intent.putExtra("badge_count_package_name", packageName);
-        intent.putExtra("badge_count_class_name", mainActivityName);
-        context.sendBroadcast(intent);
+        intent.putExtra("badge_count_package_name", mPackageName);
+        intent.putExtra("badge_count_class_name", mLaunchActivityClass);
+        mAppContext.sendBroadcast(intent);
 
     }
 
@@ -277,18 +249,17 @@ public class BadgeUtils {
      * @param badgeNumber @desc 数量
      */
     private static void setBadgeNumberhtc(int badgeNumber) {
-
-        if (TextUtils.isEmpty(packageName)) {
+        if (TextUtils.isEmpty(mPackageName)) {
             return;
         }
         Intent intentNotification = new Intent("com.htc.launcher.action.SET_NOTIFICATION");
-        intentNotification.putExtra("com.htc.launcher.extra.COMPONENT", packageName);
+        intentNotification.putExtra("com.htc.launcher.extra.COMPONENT", mPackageName);
         intentNotification.putExtra("com.htc.launcher.extra.COUNT", badgeNumber);
-        context.sendBroadcast(intentNotification);
+        mAppContext.sendBroadcast(intentNotification);
         Intent intentShortcut = new Intent("com.htc.launcher.action.UPDATE_SHORTCUT");
-        intentShortcut.putExtra("packagename", packageName);
+        intentShortcut.putExtra("packagename", mPackageName);
         intentShortcut.putExtra("count", badgeNumber);
-        context.sendBroadcast(intentShortcut);
+        mAppContext.sendBroadcast(intentShortcut);
     }
 
 
@@ -320,20 +291,21 @@ public class BadgeUtils {
 
     /**
      * 华为手机设置角标
+     * 需添加权限<uses-permission android:name="com.huawei.android.launcher.permission.CHANGE_BADGE" />
      * Huawei mobile phone settings corner
      *
      * @param badgeNumber @desc 数量
      */
     private static void setBadgeNumberHuawei(int badgeNumber) {
 
-        if (TextUtils.isEmpty(packageName)) {
+        if (TextUtils.isEmpty(mPackageName)) {
             return;
         }
         Bundle extra = new Bundle();
-        extra.putString("package", packageName);
-        extra.putString("class", mainActivityName);
+        extra.putString("package", mPackageName);
+        extra.putString("class", mLaunchActivityClass);
         extra.putInt("badgenumber", badgeNumber);
-        context.getContentResolver().call(Uri.parse("content://com.huawei.android.launcher.settings/badge/"),
+        mAppContext.getContentResolver().call(Uri.parse("content://com.huawei.android.launcher.settings/badge/"),
                 "change_badge", null, extra);
     }
 
@@ -345,15 +317,14 @@ public class BadgeUtils {
      * @param badgeNumber @desc 数量
      */
     private static void setBadgeNumberSamsung(int badgeNumber) {
-
-        if (TextUtils.isEmpty(packageName)) {
+        if (TextUtils.isEmpty(mPackageName)) {
             return;
         }
         Intent intent = new Intent("android.intent.action.BADGE_COUNT_UPDATE");
         intent.putExtra("badge_count", badgeNumber);
-        intent.putExtra("badge_count_package_name", packageName);
-        intent.putExtra("badge_count_class_name", mainActivityName);
-        context.sendBroadcast(intent);
+        intent.putExtra("badge_count_package_name", mPackageName);
+        intent.putExtra("badge_count_class_name", mLaunchActivityClass);
+        mAppContext.sendBroadcast(intent);
     }
 
     /**
@@ -365,11 +336,11 @@ public class BadgeUtils {
     public static void setBadgeNumberVivo(int badgeNumber) {
         try {
             Intent intent = new Intent("launcher.action.CHANGE_APPLICATION_NOTIFICATION_NUM");
-            intent.putExtra("packageName", packageName);
-            String launchClassName = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName()).getComponent().getClassName();
+            intent.putExtra("packageName", mPackageName);
+            String launchClassName = mAppContext.getPackageManager().getLaunchIntentForPackage(mAppContext.getPackageName()).getComponent().getClassName();
             intent.putExtra("className", launchClassName);
             intent.putExtra("notificationNum", badgeNumber);
-            context.sendBroadcast(intent);
+            mAppContext.sendBroadcast(intent);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -382,7 +353,7 @@ public class BadgeUtils {
      * @return
      */
     public static boolean broadcastStarts(Intent intent) {
-        PackageManager packageManager = context.getPackageManager();
+        PackageManager packageManager = mAppContext.getPackageManager();
         List<ResolveInfo> receivers = packageManager.queryBroadcastReceivers(intent, 0);
         return receivers != null && receivers.size() > 0;
     }
@@ -397,16 +368,16 @@ public class BadgeUtils {
     public static void setBadgeNumberOppo(int badgeNumber) {
         try {
             Intent intent = new Intent("com.oppo.unsettledevent");
-            intent.putExtra("pakeageName", context.getPackageName());
+            intent.putExtra("pakeageName", mAppContext.getPackageName());
             intent.putExtra("number", badgeNumber);
             intent.putExtra("upgradeNumber", badgeNumber);
             if (broadcastStarts(intent)) {
-                context.sendBroadcast(intent);
+                mAppContext.sendBroadcast(intent);
             } else {
                 try {
                     Bundle extras = new Bundle();
                     extras.putInt("app_badge_count", badgeNumber);
-                    context.getContentResolver().call(Uri.parse("content://com.android.badge/badge"), "setAppBadgeCount", null, extras);
+                    mAppContext.getContentResolver().call(Uri.parse("content://com.android.badge/badge"), "setAppBadgeCount", null, extras);
                 } catch (Throwable th) {
                 }
             }

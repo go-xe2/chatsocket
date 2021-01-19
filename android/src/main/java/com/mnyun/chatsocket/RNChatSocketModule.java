@@ -65,62 +65,12 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
     this.settingManager = new SettingManager(reactContext);
     this.imClient = new IMServerClient(reactContext);
     instance = this;
-    startChatService();
+//    startChatService();
 //     注册接收者
 //    com.mnyun.chatsocket.action.chat
 //    reactContext.registerReceiver(new ChatBroadcastReceiver(this), new IntentFilter(ChatSocketConstants.CST_BROADCAST_CHAT_ACTION));
   }
 
-  /**
-   * 启动即时消息服务客户端
-   */
-  @RequiresApi(api = Build.VERSION_CODES.O)
-  private void startChatService() {
-    chatServiceIndent = createChatServiceIndent();
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      reactContext.startForegroundService(chatServiceIndent);
-    } else {
-      reactContext.startService(chatServiceIndent);
-    }
-  }
-
-  /**
-   * 停止chatService服务
-   */
-  private void stopChatService() {
-    if (chatServiceIndent != null) {
-      reactContext.stopService(chatServiceIndent);
-    }
-  }
-
-  /**
-   * 创建chatService服务的Indent
-   * @return
-   */
-  private Intent createChatServiceIndent() {
-    Intent chatServiceIndent = new Intent(reactContext, ChatService.class);
-    Bundle params = new Bundle();
-    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_WS_HOST_PARAM, this.settingManager.getIMHost());
-    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_HTTP_URL_PARAM, this.settingManager.getIMHttpUrl());
-    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_USER_ID_PARAM, this.settingManager.getUserID());
-    params.putString(ChatSocketConstants.CST_CHAT_SERVICE_USER_TOKEN_PARAM, this.settingManager.getUserToken());
-    try {
-      DeviceInfo deviceInfo = this.settingManager.getDeviceInfo();
-      if (deviceInfo != null) {
-        Bundle deviceParams = new Bundle();
-        deviceParams.putString("uuid", deviceInfo.getUuid());
-        deviceParams.putString("brand", deviceInfo.getBrand());
-        deviceParams.putString("mode", deviceInfo.getMode());
-        deviceParams.putString("sysVersion", deviceInfo.getSdkVersion());
-        deviceParams.putString("sdkVersion", deviceInfo.getSdkVersion());
-        params.putBundle(ChatSocketConstants.CST_CHAT_SERVICE_DEVICE_INFO_PARAM, deviceParams);
-      }
-    } catch (JSONException e) {
-      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "从配置中读取deviceInfo出错:" + e.getMessage());
-    }
-    chatServiceIndent.putExtra("params", params);
-    return chatServiceIndent;
-  }
 
   @Override
   public String getName() {
@@ -317,6 +267,9 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
   public void getDeviceInfo(final Promise promise) {
     try {
       DeviceInfo info = this.settingManager.getDeviceInfo();
+      if (info == null) {
+        info = new DeviceInfo();
+      }
       promise.resolve(info.toWritableMap());
     } catch (JSONException e) {
       WritableMap result = Arguments.createMap();
@@ -561,26 +514,27 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
    * @param promise
    */
   @ReactMethod
-  public void userSignIn(ReadableMap options, final Promise promise) {
+  public void signIn(ReadableMap options, final Promise promise) {
     try {
-//      String token = StringUtils.emptyDefault(options.getString("token"), "");
-//      String userId = StringUtils.emptyDefault(options.getString("userId"), "");
-//      WritableMap res = Arguments.createMap();;
-//      if (StringUtils.isBlank(token) || StringUtils.isBlank(userId)) {
-//        res.putBoolean("error", true);
-//        res.putString("msg", "token或userId不能为空");
-//        promise.resolve(res);
-//        return;
-//      }
-//      if (chatServiceBinder == null) {
-//        res.putBoolean("error", true);
-//        res.putString("msg", "未连接到chatService服务");
-//        return;
-//      }
-//      chatServiceBinder.userSignIn(token, userId);
-//      res.putBoolean("error", false);
-//      res.putString("msg", "操作成功,在onSignInResp事件中获取操作结果");
-      promise.resolve(false);
+      String token = StringUtils.emptyDefault(options.getString("token"), "");
+      String userId = StringUtils.emptyDefault(options.getString("userId"), "");
+      WritableMap res = Arguments.createMap();;
+      if (StringUtils.isBlank(token) || StringUtils.isBlank(userId)) {
+        res.putBoolean("error", true);
+        res.putString("msg", "token或userId不能为空");
+        promise.resolve(res);
+        return;
+      }
+      Intent signIndent = new Intent(reactContext, ChatServiceCtrlReceiver.class);
+      signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_TYPE, ChatSocketConstants.CTRL_CHAT_SIGN_IN);
+      Bundle content = new Bundle();
+      content.putString("token", token);
+      content.putString("userId", userId);
+      signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_PARAM,content);
+      reactContext.sendBroadcast(signIndent);
+      res.putBoolean("error", false);
+      res.putString("msg", "操作成功");
+      promise.resolve(res);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
       result.putBoolean("error", true);
@@ -590,23 +544,30 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
   }
 
   /**
-   * 手动连接
+   * 用户退出登录,与device解除绑定
    * @param options
    * @param promise
    */
   @ReactMethod
-  public void socketConnect(ReadableMap options, final Promise promise) {
+  public void signOut(ReadableMap options, final Promise promise) {
     try {
-//      WritableMap res = Arguments.createMap();;
-//      if (chatServiceBinder == null) {
-//        res.putBoolean("error", true);
-//        res.putString("msg", "未连接到chatService服务");
-//        return;
-//      }
-//      chatServiceBinder.Connect();
-//      res.putBoolean("error", false);
-//      res.putString("msg", "操作成功");
-      promise.resolve(false);
+      String token = StringUtils.emptyDefault(options.getString("token"), "");
+      WritableMap res = Arguments.createMap();;
+      if (StringUtils.isBlank(token)) {
+        res.putBoolean("error", true);
+        res.putString("msg", "token不能为空");
+        promise.resolve(res);
+        return;
+      }
+      Intent signIndent = new Intent(reactContext, ChatServiceCtrlReceiver.class);
+      signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_TYPE, ChatSocketConstants.CTRL_CHAT_SIGN_OUT);
+      Bundle content = new Bundle();
+      content.putString("token", token);
+      signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_PARAM,content);
+      reactContext.sendBroadcast(signIndent);
+      res.putBoolean("error", false);
+      res.putString("msg", "操作成功");
+      promise.resolve(res);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
       result.putBoolean("error", true);
@@ -660,28 +621,6 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
   public void onHostDestroy() {
     Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "onHostDestroy");
   }
-
-//  /**
-//   * chat事件接收
-//   */
-//  final BroadcastReceiver chatReceiver = new BroadcastReceiver() {
-//    @Override
-//    public void onReceive(Context context, Intent intent) {
-//      if (intent == null) {
-//        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive intent is null.");
-//        return;
-//      }
-//      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive action:" + intent.getAction());
-//      if (ChatSocketConstants.CST_BROADCAST_CHAT_ACTION.equals(intent.getAction())) {
-//        return;
-//      }
-//      Bundle params = intent.getExtras();
-//      String event = params.getString("event");
-//      String data = params.getString("content");
-//      Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "BroadcastReceiver.onReceive data:" + params.toString());
-//      emitChatData(event, data);
-//    }
-//  };
 
   public static class ChatBroadcastReceiver extends BroadcastReceiver {
     @Override

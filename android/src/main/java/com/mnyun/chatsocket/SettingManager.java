@@ -15,7 +15,9 @@ public class SettingManager {
     public SettingManager(Context applicationContext) {
         super();
         this.mContext = applicationContext;
-        mSettings = applicationContext.getSharedPreferences(ChatSocketConstants.CHAT_SOCKET_PREFERENCES, 0);
+        if (applicationContext != null) {
+            mSettings = applicationContext.getSharedPreferences(ChatSocketConstants.CHAT_SOCKET_PREFERENCES, 0);
+        }
     }
     /**
      * 读取项目的IMHost配置

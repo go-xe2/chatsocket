@@ -72,6 +72,7 @@ public class ChatClient implements ChatSocket {
     public void connect(String host, String deviceId) {
         this.wsHost = host;
         this.deviceId = deviceId;
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "连接消息服务:" + host + ", deviceId:" + deviceId);
         if (StringUtils.isBlank(this.wsHost) || StringUtils.isBlank(this.deviceId)) {
             return;
         }
@@ -236,6 +237,7 @@ public class ChatClient implements ChatSocket {
     public void close() {
         this.isStop = true;
         this.innerClose();
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "chatClient close.");
     }
 
     /**
@@ -275,12 +277,27 @@ public class ChatClient implements ChatSocket {
     public void userSignIn(String token, String userId) {
         try {
             JSONObject obj = new JSONObject();
-            obj.put("token", userId);
+            obj.put("token", token);
             obj.put("user_id", userId);
             String pk = "041EA01" + obj.toString();
             this.send(pk);
         } catch (JSONException e) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "userSignIn encode json error:" + e.getMessage());
+        }
+    }
+
+    /**
+     * 用户退出登录
+     * @param token
+     */
+    public void userSignOut(String token) {
+        try {
+            JSONObject obj = new JSONObject();
+            obj.put("token", token);
+            String pk = "061EA01" + obj.toString();
+            this.send(pk);
+        } catch (JSONException e) {
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "userSignOut encode json error:" + e.getMessage());
         }
     }
 
