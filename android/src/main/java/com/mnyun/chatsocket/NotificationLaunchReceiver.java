@@ -48,26 +48,41 @@ public class NotificationLaunchReceiver extends BroadcastReceiver {
             return;
         }
         //判断app进程是否存活
-        if (SystemUtils.isAppAlive(context, mPackageName) > 0) {
+        int aLive = SystemUtils.isAppAlive(context, mPackageName);
+        if (aLive > 0) {
             //如果存活的话，就直接启动DetailActivity，但要考虑一种情况，就是app的进程虽然仍然在
             //但Task栈已经空了，比如用户点击Back键退出应用，但进程还没有被系统回收，如果直接启动
             //DetailActivity,再按Back键就不会返回MainActivity了。所以在启动
             //DetailActivity前，要先启动MainActivity。
-            Log.i(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "the app process is alive");
-            Intent launchIntent = null;
-            if (!TextUtils.isEmpty(manager.getLaunchActivityName())) {
-                launchIntent = new Intent(manager.getLaunchActivityName());
-                launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            }
-            Intent mainIntent = new Intent(manager.getMainActivityName());
-            mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            Log.i(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "the app process is alive， live status:" + aLive);
             List intents = new ArrayList<Intent>();
-            if (launchIntent != null) {
-                intents.add(launchIntent);
+
+            String launchActivityClassName = manager.getLaunchActivityName();
+            String mainActivityClassName = manager.getMainActivityName();
+            if (!TextUtils.isEmpty(launchActivityClassName) && !launchActivityClassName.equals(mainActivityClassName)) {
+                try {
+                    Class launchClass = Class.forName(launchActivityClassName);
+                    Intent launchIntent = new Intent(context, launchClass);
+                    launchIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    intents.add(launchIntent);
+                } catch (ClassNotFoundException e) {
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "创建LaunchActivity出错:" + e.getMessage());
+                }
             }
-            intents.add(mainIntent);
+            try {
+                Class mainActivity = Class.forName(manager.getMainActivityName());
+                Intent mainIntent = new Intent(context, mainActivity);
+                mainIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                intents.add(mainIntent);
+            } catch (ClassNotFoundException e) {
+                Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "创建mainActivity出错:" + e.getMessage());
+            }
             Intent[] arrIndent = new Intent[intents.size()];
             intents.toArray(arrIndent);
+            if (aLive == 2) {
+                // 切换到前台
+                SystemUtils.setTopApp(context);
+            }
             context.startActivities(arrIndent);
         } else {
             //如果app进程已经被杀死，先重新启动app，将DetailActivity的启动参数传入Intent中，参数经过

@@ -1,7 +1,9 @@
 package com.mnyun.imServerClient;
 
 import android.content.Context;
+import android.util.Log;
 
+import com.mnyun.chatsocket.ChatSocketConstants;
 import com.mnyun.chatsocket.DeviceInfo;
 import com.mnyun.chatsocket.SettingManager;
 import com.mnyun.net.BaseCallback;
@@ -61,6 +63,7 @@ public class IMServerClient {
      */
     public void regDevice(String appKey, String appSecret, DeviceInfo info, final IMServerCallback<String> callback) {
         String url = this.imHttpUrl + "/RegDevice";
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "向:" + url + "发送注册设备请求");
         BaseOkHttpClient.newBuilder()
                 .addParam("app_key", appKey)
                 .addParam("app_secret", appSecret)
@@ -76,6 +79,7 @@ public class IMServerClient {
                 .execute(new BaseCallback() {
                     @Override
                     public void onSuccess(Object o) {
+                        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "注册成功:" + o.toString());
                         IMServerResult result = parseJsonResult(o.toString(), new IMContentConvert() {
                             @Override
                             public Object Convert(JSONObject content) throws Exception {
@@ -87,11 +91,13 @@ public class IMServerClient {
 
                     @Override
                     public void onError(int code) {
+                        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "注册出错:" +code);
                         callback.onResult(new IMServerResult<String>(true, "服务错误:" + code, ""));
                     }
 
                     @Override
                     public void onFailure(Call call, IOException e) {
+                        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "注册失败:" + e.getMessage());
                         callback.onResult(new IMServerResult<String>(true, "调用出错:" + e.getMessage(), ""));
                     }
                 });

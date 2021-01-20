@@ -4,6 +4,9 @@ import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.text.TextUtils;
+import android.util.Log;
+
+import com.mnyun.chatsocket.ChatSocketConstants;
 
 import java.util.List;
 
@@ -51,6 +54,22 @@ public class SystemUtils {
         }
     }
 
+    /**
+     * 将应用从后台切换到前台
+     * @param context
+     */
+    public static void setTopApp(Context context) {
+        ActivityManager activityManager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        //获得当前运行的task(任务)
+        List<ActivityManager.RunningTaskInfo> taskInfoList = activityManager.getRunningTasks(100);
+        for (ActivityManager.RunningTaskInfo taskInfo : taskInfoList) {
+            //找到本应用的 task，并将它切换到前台
+            if (taskInfo.topActivity.getPackageName().equals(context.getPackageName())) {
+                activityManager.moveTaskToFront(taskInfo.id, ActivityManager.MOVE_TASK_WITH_HOME);
+                break;
+            }
+        }
+    }
 
     /**
      * 判断某个界面是否在前台

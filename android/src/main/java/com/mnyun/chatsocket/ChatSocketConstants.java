@@ -59,4 +59,6 @@ public class ChatSocketConstants {
     public static final String NOTIFICATION_EVENT_CLICKED = "notification_clicked";
     public static final String NOTIFICATION_EVENT_CANCELLED ="notification_cancelled";
     public static final String NOTIFICATION_ID_PARAM = "notificationId";
+    public static final String NOTIFICATION_CHANNEL_ID = "mnyun";
+    public static final String NOTIFICATION_CHANNEL_NAME = "com.mnyun.app";
 }

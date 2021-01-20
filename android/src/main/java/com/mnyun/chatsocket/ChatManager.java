@@ -1,6 +1,7 @@
 package com.mnyun.chatsocket;
 
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
@@ -59,8 +60,10 @@ public class ChatManager {
      */
     public static void startChatService(Context context) {
         // 发送启动chatService广播
-        Intent startServiceBroadcastIndent = new Intent();
-        startServiceBroadcastIndent.setAction(ChatSocketConstants.CST_START_CHAT_SERVICE_ACTION);
+        Intent startServiceBroadcastIndent = new Intent(ChatSocketConstants.CST_START_CHAT_SERVICE_ACTION);
+        startServiceBroadcastIndent.setComponent(new ComponentName(ChatManager.getInstance().getPackageName(), StartChatServiceReceiver.class.getName()));
+        startServiceBroadcastIndent.setPackage(ChatManager.getInstance().getPackageName());
+//        startServiceBroadcastIndent.setAction(ChatSocketConstants.CST_START_CHAT_SERVICE_ACTION);
         context.sendBroadcast(startServiceBroadcastIndent);
     }
 

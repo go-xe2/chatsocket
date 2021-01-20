@@ -49,12 +49,17 @@ public class ChatServiceSocket implements ChatClientHandler {
      */
     public void init(Context appContext) {
         this.appContext = appContext;
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接1");
         if (this.chatClient == null) {
             this.chatClient = new ChatClient();
         }
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接2");
         SettingManager setting = new SettingManager(this.appContext);
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接3");
         String wsHost = setting.getIMHost();
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接4");
         String wsHttpUrl = setting.getIMHttpUrl();
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化 wsHost:" + wsHost + ", wsHttpUrl:" + wsHttpUrl);
         if (TextUtils.isEmpty(wsHost) || TextUtils.isEmpty(wsHttpUrl)) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "未配置IMHost及imHttpUrl参数");
             return;
@@ -62,6 +67,7 @@ public class ChatServiceSocket implements ChatClientHandler {
         this.deviceId = this.getOrRegisterDeviceId(setting);
         this.wsHost = wsHost;
         this.wsHttpUrl = wsHttpUrl;
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "获取deviceId:" + this.deviceId);
         if (TextUtils.isEmpty(this.deviceId)) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "deviceId为空，未连接IM服务");
             return;
@@ -82,6 +88,7 @@ public class ChatServiceSocket implements ChatClientHandler {
      */
     protected String getOrRegisterDeviceId(final SettingManager setting) {
         final String deviceId = setting.getDeviceID();
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "获取deviceId:" + deviceId);
         if (!TextUtils.isEmpty(deviceId)) {
             return deviceId;
         }
@@ -93,21 +100,24 @@ public class ChatServiceSocket implements ChatClientHandler {
                 return "";
             }
         } catch (JSONException e) {
-            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, e.getMessage());
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "读取deviceInfo出错:" + e.getMessage());
             return "";
         }
         IMServerClient client = new IMServerClient(appContext);
         String appKey = setting.getAppKey();
         String appSecret = setting.getAppSecret();
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "应用配置appKey:" + appKey + ", appSecret:" + appSecret);
         if (TextUtils.isEmpty(appKey) || TextUtils.isEmpty(appSecret)) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "未设备appKey,appSecret参数");
             return "";
         }
         final CountDownLatch latch = new CountDownLatch(1);
         final String[] szResultDeviceId = new String[1];
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "发送注册设备请求:" + info.toString());
         client.regDevice(appKey, appSecret,info, new IMServerCallback<String>() {
             @Override
             public void onResult(IMServerResult<String> result) {
+                Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "注册设备返回:" + result.getContent());
                 latch.countDown();
                 if (result.isError()) {
                     Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "注册设备出错:" + result.getMsg());
@@ -118,10 +128,12 @@ public class ChatServiceSocket implements ChatClientHandler {
             }
         });
         try {
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "发送注册设备请求完成，等待返回.");
             latch.await();
         } catch (InterruptedException e) {
-            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, e.getMessage());
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "等待注册返回出错:" +  e.getMessage());
         }
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "注册设备返回:" + szResultDeviceId[0]);
         return szResultDeviceId[0];
     }
 
