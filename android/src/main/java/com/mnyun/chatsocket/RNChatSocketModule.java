@@ -9,7 +9,10 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -19,6 +22,7 @@ import com.facebook.react.ReactApplication;
 import com.facebook.react.ReactInstanceManager;
 import com.facebook.react.ReactNativeHost;
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -56,25 +60,56 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
   private static ReactApplicationContext reactContext;
   private final SettingManager settingManager;
   private final IMServerClient imClient;
-  private Intent chatServiceIndent;
-  private static RNChatSocketModule instance;
+  private Handler mHandler;
   @RequiresApi(api = Build.VERSION_CODES.O)
   public RNChatSocketModule(ReactApplicationContext reactContext) {
     super(reactContext);
     this.reactContext = reactContext;
     this.settingManager = new SettingManager(reactContext);
     this.imClient = new IMServerClient(reactContext);
-    instance = this;
-//    startChatService();
-//     注册接收者
-//    com.mnyun.chatsocket.action.chat
-//    reactContext.registerReceiver(new ChatBroadcastReceiver(this), new IntentFilter(ChatSocketConstants.CST_BROADCAST_CHAT_ACTION));
+    this.mHandler = new Handler(Looper.getMainLooper());
   }
-
 
   @Override
   public String getName() {
     return "RNChatSocket";
+  }
+
+  @ReactMethod
+  public void chatSocketInit(ReadableMap options, final Promise promise) {
+    WritableMap res = Arguments.createMap();
+    if (options == null) {
+      res.putString("error", "未设备参数");
+      promise.resolve(res);
+      return;
+    }
+    ReadableMap deviceInfoMap = options.getMap("deviceInfo");
+    if (deviceInfoMap == null) {
+      res.putString("error", "未设备deviceInfo参数");
+      promise.resolve(res);
+      return;
+    }
+    DeviceInfo deviceInfo = new DeviceInfo();
+    deviceInfo.fromReadableMap(deviceInfoMap);
+    if (TextUtils.isEmpty(deviceInfo.getUuid())) {
+      res.putString("error", "deviceInfo未设备uuid字段");
+      promise.resolve(res);
+      return;
+    }
+    try {
+      this.settingManager.saveDeviceInfo(deviceInfo.getUuid(), deviceInfo.getBrand(), deviceInfo.getMode(), deviceInfo.getSysVersion(), deviceInfo.getSdkVersion());
+    } catch (JSONException e) {
+      res.putString("error", "保存deviceInfo出错:" +  e.getMessage());
+      promise.resolve(res);
+      return;
+    }
+    String deviceId = options.getString("deviceId");
+    if (!TextUtils.isEmpty(deviceId)) {
+      this.settingManager.saveDeviceID(deviceId);
+    }
+    // 初始化完成，启动chatService服务连接IM服务
+    ChatManager.startChatService(this.getReactApplicationContext());
+    promise.resolve(true);
   }
 
   /**
@@ -179,8 +214,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       promise.resolve(true);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -197,8 +231,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       promise.resolve(true);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -215,8 +248,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       promise.resolve(true);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -233,8 +265,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       promise.resolve(true);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -253,8 +284,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       promise.resolve(true);
     } catch (JSONException e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -273,8 +303,7 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       promise.resolve(info.toWritableMap());
     } catch (JSONException e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -297,14 +326,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       ChatMessageType msgType = ChatMessageType.values()[nMsgType];
       this.imClient.send(token, receiverType, receiverId, toUserIds, msgType, msgContent, new IMServerCallback<SendResContent>() {
         @Override
-        public void onResult(IMServerResult<SendResContent> result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult<SendResContent> result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -322,14 +355,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       int event = options.getInt("event");
       this.imClient.sendEvent(token, receiverId, event, new IMServerCallback() {
         @Override
-        public void onResult(IMServerResult result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -346,14 +383,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       int msgId = options.getInt("msgId");
       this.imClient.setMessageRead(token, msgId, new IMServerCallback() {
         @Override
-        public void onResult(IMServerResult result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+               promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -370,14 +411,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       int msgId = options.getInt("msgId");
       this.imClient.getMsg(token, msgId, new IMServerCallback<MsgContent>() {
         @Override
-        public void onResult(IMServerResult<MsgContent> result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult<MsgContent> result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -396,14 +441,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       int ps = options.getInt("ps");
       this.imClient.getContacts(token, search, pi, ps, new IMServerCallback<ContactPage>() {
         @Override
-        public void onResult(IMServerResult<ContactPage> result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult<ContactPage> result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -421,14 +470,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       int count = options.getInt("count");
       this.imClient.syncMessageList(token, seq, count, new IMServerCallback<MsgContentList>() {
         @Override
-        public void onResult(IMServerResult<MsgContentList> result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult<MsgContentList> result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -442,17 +495,21 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
   public void delMessage(ReadableMap options, final Promise promise) {
     try {
       String token = StringUtils.emptyDefault(options.getString("token"), "");
-      int msgId = options.getInt("msgId");
+      final int msgId = options.getInt("msgId");
       this.imClient.delMessage(token, msgId, new IMServerCallback() {
         @Override
-        public void onResult(IMServerResult result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -471,14 +528,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       String userId = this.getUserID();
       this.imClient.regDevice(token, userId, deviceInfo, new IMServerCallback<String>() {
         @Override
-        public void onResult(IMServerResult<String> result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult<String> result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -496,14 +557,18 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       user.fromReadableMap(options);
       this.imClient.regUser(token, user, new IMServerCallback() {
         @Override
-        public void onResult(IMServerResult result) {
-          promise.resolve(result.toWritableMap());
+        public void onResult(final IMServerResult result) {
+          mHandler.post(new Runnable() {
+            @Override
+            public void run() {
+              promise.resolve(result.toWritableMap());
+            }
+          });
         }
       });
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -520,25 +585,26 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       String userId = StringUtils.emptyDefault(options.getString("userId"), "");
       WritableMap res = Arguments.createMap();;
       if (StringUtils.isBlank(token) || StringUtils.isBlank(userId)) {
-        res.putBoolean("error", true);
-        res.putString("msg", "token或userId不能为空");
+        res.putString("error", "token或userId不能为空");
         promise.resolve(res);
         return;
       }
-      Intent signIndent = new Intent(reactContext, ChatServiceCtrlReceiver.class);
+      ChatManager chatManager = ChatManager.getInstance();
+      Intent signIndent = new Intent(ChatSocketConstants.CST_CHAT_SERVICE_CTRL_ACTION);
+//      signIndent.setAction(ChatSocketConstants.CST_CHAT_SERVICE_CTRL_ACTION);
+//      signIndent.setPackage(chatManager.getPackageName());
+//      signIndent.setComponent(new ComponentName(chatManager.getPackageName(), ChatServiceCtrlReceiver.class.getName()));
+
       signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_TYPE, ChatSocketConstants.CTRL_CHAT_SIGN_IN);
       Bundle content = new Bundle();
       content.putString("token", token);
       content.putString("userId", userId);
       signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_PARAM,content);
       reactContext.sendBroadcast(signIndent);
-      res.putBoolean("error", false);
-      res.putString("msg", "操作成功");
-      promise.resolve(res);
+      promise.resolve(true);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
-      result.putBoolean("error", true);
-      result.putString("msg", e.getMessage());
+      result.putString("error", e.getMessage());
       promise.resolve(result);
     }
   }
@@ -554,20 +620,23 @@ public class RNChatSocketModule extends ReactContextBaseJavaModule implements Li
       String token = StringUtils.emptyDefault(options.getString("token"), "");
       WritableMap res = Arguments.createMap();;
       if (StringUtils.isBlank(token)) {
-        res.putBoolean("error", true);
-        res.putString("msg", "token不能为空");
+        res.putString("error", "token不能为空");
         promise.resolve(res);
         return;
       }
-      Intent signIndent = new Intent(reactContext, ChatServiceCtrlReceiver.class);
-      signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_TYPE, ChatSocketConstants.CTRL_CHAT_SIGN_OUT);
+      ChatManager chatManager = ChatManager.getInstance();
+      Intent signOutIntent = new Intent(ChatSocketConstants.CST_CHAT_SERVICE_CTRL_ACTION);
+//
+//      signOutIntent.setAction(ChatSocketConstants.CST_CHAT_SERVICE_CTRL_ACTION);;
+//      signOutIntent.setPackage(chatManager.getPackageName());
+//      signOutIntent.setComponent(new ComponentName(chatManager.getPackageName(), ChatServiceCtrlReceiver.class.getName()));
+
+      signOutIntent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_TYPE, ChatSocketConstants.CTRL_CHAT_SIGN_OUT);
       Bundle content = new Bundle();
       content.putString("token", token);
-      signIndent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_PARAM,content);
-      reactContext.sendBroadcast(signIndent);
-      res.putBoolean("error", false);
-      res.putString("msg", "操作成功");
-      promise.resolve(res);
+      signOutIntent.putExtra(ChatSocketConstants.CTRL_CHAT_CTRL_PARAM,content);
+      reactContext.sendBroadcast(signOutIntent);
+      promise.resolve(true);
     } catch (Exception e) {
       WritableMap result = Arguments.createMap();
       result.putBoolean("error", true);

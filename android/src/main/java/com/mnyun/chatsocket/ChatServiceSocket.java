@@ -49,17 +49,12 @@ public class ChatServiceSocket implements ChatClientHandler {
      */
     public void init(Context appContext) {
         this.appContext = appContext;
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接1");
         if (this.chatClient == null) {
             this.chatClient = new ChatClient();
         }
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接2");
         SettingManager setting = new SettingManager(this.appContext);
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接3");
         String wsHost = setting.getIMHost();
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化websocket链接4");
         String wsHttpUrl = setting.getIMHttpUrl();
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "初始化 wsHost:" + wsHost + ", wsHttpUrl:" + wsHttpUrl);
         if (TextUtils.isEmpty(wsHost) || TextUtils.isEmpty(wsHttpUrl)) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "未配置IMHost及imHttpUrl参数");
             return;
@@ -67,7 +62,6 @@ public class ChatServiceSocket implements ChatClientHandler {
         this.deviceId = this.getOrRegisterDeviceId(setting);
         this.wsHost = wsHost;
         this.wsHttpUrl = wsHttpUrl;
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "获取deviceId:" + this.deviceId);
         if (TextUtils.isEmpty(this.deviceId)) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "deviceId为空，未连接IM服务");
             return;
@@ -88,7 +82,6 @@ public class ChatServiceSocket implements ChatClientHandler {
      */
     protected String getOrRegisterDeviceId(final SettingManager setting) {
         final String deviceId = setting.getDeviceID();
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "获取deviceId:" + deviceId);
         if (!TextUtils.isEmpty(deviceId)) {
             return deviceId;
         }
@@ -113,7 +106,6 @@ public class ChatServiceSocket implements ChatClientHandler {
         }
         final CountDownLatch latch = new CountDownLatch(1);
         final String[] szResultDeviceId = new String[1];
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "发送注册设备请求:" + info.toString());
         client.regDevice(appKey, appSecret,info, new IMServerCallback<String>() {
             @Override
             public void onResult(IMServerResult<String> result) {

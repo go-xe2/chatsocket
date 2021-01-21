@@ -224,7 +224,14 @@ const signOut = async ({
     return await RNChatSocket.signOut({ token });
 };
 
+const chatSocketInit = async ({
+    deviceInfo = {},
+    deviceId = '',
+}) => {
+    return await RNChatSocket.chatSocketInit({ deviceInfo, deviceId });
+};
 export default {
+    chatSocketInit,
     getVersion,
     getIMHost,
     getAppKey,

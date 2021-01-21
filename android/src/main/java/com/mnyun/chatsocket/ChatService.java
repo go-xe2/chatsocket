@@ -25,7 +25,7 @@ public class ChatService extends Service {
     public ChatService() {
         super();
     }
-    private final ChatServiceCtrlReceiver chatServiceCtrlReceiver = new ChatServiceCtrlReceiver();
+    private ChatServiceCtrlReceiver chatServiceCtrlReceiver;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -36,7 +36,8 @@ public class ChatService extends Service {
         }
         Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "chatService create.");
         IntentFilter filter = new IntentFilter();
-        filter.addAction(chatServiceCtrlReceiver.getClass().getName());
+        filter.addAction(ChatSocketConstants.CST_CHAT_SERVICE_CTRL_ACTION);
+        this.chatServiceCtrlReceiver = new ChatServiceCtrlReceiver(this);
         this.registerReceiver(chatServiceCtrlReceiver, filter);
     }
 
@@ -90,6 +91,9 @@ public class ChatService extends Service {
             mChannel.setDescription(appName);
 
             mChannel.setSound(mUri, Notification.AUDIO_ATTRIBUTES_DEFAULT);
+            mChannel.enableLights(true); //是否在桌面icon右上角展示小红点
+            mChannel.setLightColor(Color.RED); //小红点颜色
+            mChannel.setShowBadge(true); //是否在久按桌面图标时显示此渠道的通知
 
             notificationManager.createNotificationChannel(mChannel);
 
@@ -121,7 +125,9 @@ public class ChatService extends Service {
         if (this.chatServiceSocket != null) {
             this.chatServiceSocket.close();
         }
-        this.unregisterReceiver(chatServiceCtrlReceiver);
+        if (chatServiceCtrlReceiver != null) {
+            this.unregisterReceiver(chatServiceCtrlReceiver);
+        }
         ChatManager.startChatService(this.getApplicationContext());
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             this.stopForeground(true);
@@ -133,5 +139,9 @@ public class ChatService extends Service {
     public IBinder onBind(Intent intent) {
         Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "chatService onBind.");
         return null;
+    }
+
+    public ChatServiceSocket getChatServiceSocket() {
+        return this.chatServiceSocket;
     }
 }

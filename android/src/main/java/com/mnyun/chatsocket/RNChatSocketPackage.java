@@ -1,6 +1,10 @@
 
 package com.mnyun.chatsocket;
 
+import android.os.Build;
+
+import androidx.annotation.RequiresApi;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -10,7 +14,9 @@ import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.uimanager.ViewManager;
 import com.facebook.react.bridge.JavaScriptModule;
+
 public class RNChatSocketPackage implements ReactPackage {
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
       return Arrays.<NativeModule>asList(new RNChatSocketModule(reactContext));

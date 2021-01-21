@@ -40,6 +40,7 @@ public class ChatSocketConstants {
     public static final String CST_MESSAGE_STATUS_BE_READ="MESSAGE_STATUS_BE_READ";
     public static final String CST_BROADCAST_CHAT_ACTION = "com.mnyun.chatsocket.action.chat";
     public static final String CST_START_CHAT_SERVICE_ACTION = "com.mnyun.chatsocket.action.start";
+    public static final String CST_CHAT_SERVICE_CTRL_ACTION = "com.mnyun.chatsocket.action.ctrl";
     public static final String CST_ON_CHAT_OPEN_EVENT = "ON_CHAT_OPEN";
     public static final String CST_ON_CHAT_CLOSE_EVENT = "ON_CHAT_CLOSE";
     public static final String CST_ON_CHAT_SIGN_IN_RESP_EVENT = "ON_CHAT_SIGN_IN_RESP";

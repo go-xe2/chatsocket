@@ -281,6 +281,7 @@ public class ChatClient implements ChatSocket {
             obj.put("user_id", userId);
             String pk = "041EA01" + obj.toString();
             this.send(pk);
+            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "用户登录IM成功.");
         } catch (JSONException e) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "userSignIn encode json error:" + e.getMessage());
         }
