@@ -51,7 +51,7 @@ public class ChatManager {
             mainActivityName = options.getMainActivityName();
             appTitle = options.getAppTitle();
         }
-        BadgeUtils.init(this.packageName, this.mainActivityName, this.appContext);
+        BadgeUtils.init(this.packageName, this.launchActivityName, appContext);
     }
 
     /**

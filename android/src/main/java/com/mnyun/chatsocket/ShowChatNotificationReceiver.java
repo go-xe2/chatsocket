@@ -16,6 +16,7 @@ import android.util.Log;
 import androidx.core.app.NotificationCompat;
 
 import com.mnyun.utils.BadgeUtils;
+import com.mnyun.utils.ResourceUtil;
 import com.mnyun.utils.SystemUtils;
 
 import org.json.JSONException;
@@ -79,10 +80,10 @@ public class ShowChatNotificationReceiver  extends BroadcastReceiver {
             JSONObject sender = data.getJSONObject("sender");
             senderType = sender.getInt("sender_type");
             if (senderType == 1 || senderType == 3) {
-                msgSummary = "通知消息";
+                msgSummary = "[通知]";
             } else {
                 senderName = sender.getString("nick_name");
-                msgSummary = "来自[" + senderName + "]的消息";
+                msgSummary = "[" + senderName + "]";
             }
         } catch (JSONException e) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, e.getMessage());
@@ -104,23 +105,29 @@ public class ShowChatNotificationReceiver  extends BroadcastReceiver {
 
 
         NotificationManager notifyManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-
+        ChatManager chatManager = ChatManager.getInstance();
+        String appName = context.getString(ResourceUtil.getStringResId(context, "app_name"));
+        int smallIcon = ResourceUtil.getMipmapResId(context, "ic_launcher");
+        if (smallIcon == 0) {
+            smallIcon = ResourceUtil.getDrawableResId(context, "ic_launcher");
+        }
+        if (smallIcon == 0) {
+            smallIcon = R.drawable.redbox_top_border_background;
+        }
+        if (TextUtils.isEmpty(appName)) {
+            appName = chatManager.getAppTitle();
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // 创建一个Notification对象
             Notification.Builder builder = new Notification.Builder(context);
 
-//            Notification.BigTextStyle bigTextStyle = new Notification.BigTextStyle();
-//            bigTextStyle.setBigContentTitle(msgSummary)
-//                    .setSummaryText(msgContent);
-
             // 设置打开该通知，该通知自动消失
             builder.setAutoCancel(true);
             // 设置通知的图标
-            builder.setSmallIcon(R.drawable.redbox_top_border_background);
+            builder.setSmallIcon(smallIcon);
             // 设置通知内容的标题
-            builder.setContentTitle(ChatManager.getInstance().getAppTitle());
-            builder.setContentText(msgSummary);
-            builder.setSubText(msgContent);
+            builder.setContentTitle(appName);
+            builder.setContentText(msgSummary + ":" + msgContent);
             builder.setTicker(msgContent);
             // 设置通知内容
             builder.setContentIntent(clickPendingIntent);
@@ -132,14 +139,13 @@ public class ShowChatNotificationReceiver  extends BroadcastReceiver {
             builder.setSmallIcon(android.R.drawable.ic_lock_idle_charging);
             //设置发送时间
             builder.setWhen(System.currentTimeMillis());
-//            builder.setStyle(bigTextStyle);
 
             // 8.0 需要创建渠道
             NotificationChannel channel = new NotificationChannel(ChatSocketConstants.NOTIFICATION_CHANNEL_ID, ChatSocketConstants.NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
             channel.enableLights(true); //是否在桌面icon右上角展示小红点
-            channel.setLightColor(Color.GREEN); //小红点颜色
+            channel.setLightColor(Color.RED); //小红点颜色
             channel.setShowBadge(true); //是否在久按桌面图标时显示此渠道的通知
-            channel.setDescription(ChatManager.getInstance().getAppTitle());
+            channel.setDescription(appName);
             notifyManager.createNotificationChannel(channel);
             builder.setChannelId(ChatSocketConstants.NOTIFICATION_CHANNEL_ID);
 
@@ -147,21 +153,15 @@ public class ShowChatNotificationReceiver  extends BroadcastReceiver {
             notifyManager.notify(notificationId,notification);
         } else {
             NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
-
-//            NotificationCompat.BigTextStyle bigTextStyle = new NotificationCompat.BigTextStyle();
-//            bigTextStyle.setBigContentTitle(msgSummary)
-//                    .setSummaryText(msgContent);
-
-            builder.setContentTitle(ChatManager.getInstance().getAppTitle())
-                    .setContentText(msgSummary)
-                    .setSubText(msgSummary)
+            builder.setContentTitle(appName)
+                    .setSmallIcon(smallIcon)
+                    .setContentText(msgSummary + ":" + msgContent)
                     .setTicker(msgContent)
                     .setContentIntent(clickPendingIntent)
                     .setDeleteIntent(cancelPendingIntent)
                     .setDefaults(Notification.DEFAULT_SOUND
                             | Notification.DEFAULT_VIBRATE)
                     .setSmallIcon(android.R.drawable.ic_lock_idle_charging);
-//            builder.setStyle(bigTextStyle);
 
             Notification notification = builder.build();
             notifyManager.notify(notificationId, notification);

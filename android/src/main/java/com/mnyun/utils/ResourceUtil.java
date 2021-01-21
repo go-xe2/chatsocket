@@ -42,6 +42,16 @@ public class ResourceUtil {
     }
 
     /**
+     * 获取mipmap中的资源
+     * @param context
+     * @param resName
+     * @return
+     */
+    public static int getMipmapResId(Context context, String resName) {
+        return getResId(context, "mipmap", resName);
+    }
+
+    /**
      * 获取颜色资源
      *
      * @param context

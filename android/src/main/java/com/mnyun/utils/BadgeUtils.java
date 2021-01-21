@@ -10,6 +10,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
+
+import com.mnyun.chatsocket.ChatSocketConstants;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.List;
@@ -183,32 +187,41 @@ public class BadgeUtils {
      * @param badgeNumber @desc 数量
      */
     public static void setBadgeNumber(int badgeNumber) {
-
+        String launcherClassName = getLauncherClassName();
+        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设备badgeNumber, launcherClassName:" + launcherClassName);
         if (badgeNumber >= 0) {
-            switch (getLauncherClassName()) {
+            switch (launcherClassName) {
                 case HUWEI_LAUNCHERNAME:
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设置huwei手机的badgeNumber");
                     setBadgeNumberHuawei(badgeNumber);
                     break;
                 case MIUI_LAUNCHERNAME:
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设置miui手机的badgeNumber");
                     setBadgeNumberMiui(badgeNumber);
                     break;
                 case MOTOANDHTC_LAUNCHERNAME:
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设置motoandhtc手机的badgeNumber");
                     setBadgeNumberhtc(badgeNumber);
                     break;
                 case SAMSUNG_LAUNCHERNAME:
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设置samsung手机的badgeNumber");
                     setBadgeNumberSamsung(badgeNumber);
                     break;
                 case GOOGLE_LAUNCHERNAME:
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设置google手机的badgeNumber");
                     setBadgeNumberGoogle(badgeNumber);
                     break;
                 default:
                     //再根据制造商去判断
                     String manufacturer = Build.MANUFACTURER;
+                    Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "根据制造商设备,制造商:" + manufacturer);
                     switch (manufacturer) {
                         case VIVO_MANUFACTURER_NAME:
+                            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设置vivo手机的badgeNumber");
                             setBadgeNumberVivo(badgeNumber);
                             break;
                         case OPPO_MANUFACTURER_NANE:
+                            Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "设置oppo手机的badgeNumber");
                             setBadgeNumberOppo(badgeNumber);
                             break;
                         default:
@@ -278,7 +291,7 @@ public class BadgeUtils {
             } else {
                 Field field = notification.getClass().getDeclaredField("extraNotification");
                 Object extraNotification = field.get(notification);
-                Method method = extraNotification.getClass().getDeclaredMethod("setMessageCoun", int.class);
+                Method method = extraNotification.getClass().getDeclaredMethod("setMessageCount", int.class);
                 method.invoke(extraNotification, badgeNumber);
             }
 
@@ -368,7 +381,7 @@ public class BadgeUtils {
     public static void setBadgeNumberOppo(int badgeNumber) {
         try {
             Intent intent = new Intent("com.oppo.unsettledevent");
-            intent.putExtra("pakeageName", mAppContext.getPackageName());
+            intent.putExtra("packageName", mAppContext.getPackageName());
             intent.putExtra("number", badgeNumber);
             intent.putExtra("upgradeNumber", badgeNumber);
             if (broadcastStarts(intent)) {

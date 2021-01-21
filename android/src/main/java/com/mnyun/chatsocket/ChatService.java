@@ -72,9 +72,15 @@ public class ChatService extends Service {
         Notification notification = null;
         final NotificationManager notificationManager =
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        int smallIcon = ResourceUtil.getDrawableResId(appContext, "ic_launcher");
+        int smallIcon = ResourceUtil.getMipmapResId(appContext, "ic_launcher");
+        if (smallIcon == 0) {
+            smallIcon = ResourceUtil.getDrawableResId(appContext, "ic_launcher");
+        }
+        if (smallIcon == 0) {
+            smallIcon = android.R.drawable.ic_lock_idle_charging;
+        }
         String appName = getString(ResourceUtil.getStringResId(appContext, "app_name"));
-        Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "显示通知, icon:" + smallIcon + ", appName:" + appName);
+
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
 
             Uri mUri = Settings.System.DEFAULT_NOTIFICATION_URI;
@@ -89,7 +95,7 @@ public class ChatService extends Service {
 
             notification = new Notification.Builder(this, ChatSocketConstants.NOTIFICATION_CHANNEL_ID)
                     .setChannelId(ChatSocketConstants.NOTIFICATION_CHANNEL_ID)
-                    .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
+                    .setSmallIcon(smallIcon)
                     .setContentTitle(appName)
                     .setContentText(text)
                     .setContentIntent(pi)
@@ -97,7 +103,7 @@ public class ChatService extends Service {
         } else {
             // 提升应用权限
             notification = new Notification.Builder(this)
-                    .setSmallIcon(android.R.drawable.ic_lock_idle_charging)
+                    .setSmallIcon(smallIcon)
                     .setContentTitle(appName)
                     .setContentText(text)
                     .setContentIntent(pi)
@@ -107,41 +113,6 @@ public class ChatService extends Service {
         notification.flags |= Notification.FLAG_NO_CLEAR;
         notification.flags |= Notification.FLAG_FOREGROUND_SERVICE;
         startForeground(10000, notification);
-    }
-
-    private Notification showRunNotification() {
-        ChatManager chatManager = ChatManager.getInstance();
-        final NotificationManager notificationManager =
-                (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
-        // 创建一个Notification对象
-        Notification.Builder builder = new Notification.Builder(this);
-        // 设置打开该通知，该通知自动消失
-        builder.setAutoCancel(true);
-        // 设置通知的图标
-        builder.setSmallIcon(R.drawable.redbox_top_border_background);
-        // 设置通知内容的标题
-        builder.setContentTitle(chatManager.getAppTitle());
-        // 设置通知内容
-        builder.setContentText("保持后台运行以支持接收消息");
-        //设置使用系统默认的声音、默认震动
-        builder.setDefaults(Notification.DEFAULT_SOUND
-                | Notification.DEFAULT_VIBRATE);
-        //设置发送时间
-        builder.setWhen(System.currentTimeMillis());
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // 8.0 需要创建渠道
-            NotificationChannel channel = new NotificationChannel("001", chatManager.getAppTitle(), NotificationManager.IMPORTANCE_DEFAULT);
-            channel.enableLights(true); //是否在桌面icon右上角展示小红点
-            channel.setLightColor(Color.GREEN); //小红点颜色
-            channel.setShowBadge(true); //是否在久按桌面图标时显示此渠道的通知
-            notificationManager.createNotificationChannel(channel);
-            builder.setChannelId("001");
-        }
-
-        Notification notification = builder.build();
-        notificationManager.notify(1, notification);
-        return notification;
     }
 
     @Override
