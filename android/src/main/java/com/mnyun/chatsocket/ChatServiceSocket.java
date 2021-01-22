@@ -3,6 +3,8 @@ package com.mnyun.chatsocket;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -207,6 +209,7 @@ public class ChatServiceSocket implements ChatClientHandler {
     public void onUserSignInResp(JSONObject data) {
         Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "onUserSignInResp:" + data.toString());
         this.broadcastMessage(ChatSocketConstants.CST_ON_CHAT_SIGN_IN_RESP_EVENT, data);
+
     }
 
     @Override
@@ -246,6 +249,18 @@ public class ChatServiceSocket implements ChatClientHandler {
             obj.put("status", handshake.getHttpStatus());
             obj.put("msg", handshake.getHttpStatusMessage());
             this.broadcastMessage(ChatSocketConstants.CST_ON_CHAT_OPEN_EVENT, obj);
+            SettingManager setting = new SettingManager(this.appContext);
+            final String userToken = setting.getUserToken();
+            final String userId = setting.getUserID();
+            if (!TextUtils.isEmpty(userToken) && !TextUtils.isEmpty(userId)) {
+                // 打开链接后，如果之前用户已经登录，自动登录
+                new Handler(Looper.getMainLooper()).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        signIn(userToken, userId);
+                    }
+                });
+            }
         } catch (JSONException ex) {
             Log.d(ChatSocketConstants.REACT_NATIVE_LOG_TAG, "onOpen error:" + ex.getMessage());
         }
