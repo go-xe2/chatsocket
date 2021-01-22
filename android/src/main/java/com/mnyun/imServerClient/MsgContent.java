@@ -162,6 +162,24 @@ public class MsgContent implements WritableConvert {
     private int readCount;
     private int senderMsgId;
 
+    public ReceiverType getObjectType() {
+        return objectType;
+    }
+
+    public void setObjectType(ReceiverType objectType) {
+        this.objectType = objectType;
+    }
+
+    public String getObjectId() {
+        return objectId;
+    }
+
+    public void setObjectId(String objectId) {
+        this.objectId = objectId;
+    }
+
+    private ReceiverType objectType;
+    private String objectId;
     /**
      * 转换为writableMap
      * @return
@@ -185,6 +203,8 @@ public class MsgContent implements WritableConvert {
         map.putInt("status", this.status.ordinal());
         map.putInt("readCount", this.readCount);
         map.putInt("senderMsgId", this.senderMsgId);
+        map.putInt("objectType", this.objectType.ordinal());
+        map.putString("objectId", this.objectId);
         return map;
     }
 }

@@ -402,6 +402,9 @@ public class IMServerClient {
                                 msg.setStatus(MessageStatus.values()[msgStatus]);
                                 msg.setReadCount(objContent.getInt("read_count"));
                                 msg.setSenderMsgId(objContent.getInt("sender_msg_id"));
+                                int nObjectType = objContent.getInt("object_type");
+                                msg.setObjectType(ReceiverType.values()[nObjectType]);
+                                msg.setObjectId(objContent.getString("object_id"));
                                 return msg;
                             }
                         });
@@ -474,6 +477,9 @@ public class IMServerClient {
                                     msg.setStatus(MessageStatus.values()[msgStatus]);
                                     msg.setReadCount(row.getInt("read_count"));
                                     msg.setSenderMsgId(row.getInt("sender_msg_id"));
+                                    int nObjectType = row.getInt("object_type");
+                                    msg.setObjectType(ReceiverType.values()[nObjectType]);
+                                    msg.setObjectId(row.getString("object_id"));
                                     listRows.add(msg);
                                 }
                                 return list;

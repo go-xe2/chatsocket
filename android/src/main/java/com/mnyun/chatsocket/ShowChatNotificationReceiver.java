@@ -75,8 +75,8 @@ public class ShowChatNotificationReceiver  extends BroadcastReceiver {
         int msgType = 0;
         try {
             data = new JSONObject(content);
-            msgContent = data.getString("content");
-            msgType = data.getInt("msg_type");
+            msgContent = data.getString("message_content");
+            msgType = data.getInt("message_type");
             JSONObject sender = data.getJSONObject("sender");
             senderType = sender.getInt("sender_type");
             if (senderType == 1 || senderType == 3) {
